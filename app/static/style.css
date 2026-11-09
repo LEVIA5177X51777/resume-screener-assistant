@@ -255,6 +255,8 @@ kbd {
 .banner > .icon { margin-top: 2px; }
 .banner.warn { background: var(--mid-soft); border-color: color-mix(in srgb, var(--mid) 35%, transparent); color: var(--text); }
 .banner.warn > .icon { color: var(--mid); }
+.banner.info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text); }
+.banner.info > .icon { color: var(--accent); }
 .banner.error, .banner.danger { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, transparent); color: var(--text); }
 .banner.error > .icon, .banner.danger > .icon { color: var(--danger); }
 .banner.danger { box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 8%, transparent); }

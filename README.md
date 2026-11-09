@@ -92,6 +92,7 @@ attempts prompt injection.
 | `REDACT_PII` | `true` | Strip email, phone, social URLs and the candidate's name before calling the LLM |
 | `STORE_RAW_TEXT` | `false` | Whether the full JD/resume text is stored in the DB (off = data minimisation) |
 | `RETENTION_DAYS` | `90` | Analyses older than this are purged on startup |
+| `SEED_DEMO_DATA` | `false` | Preload 4 sample analyses into an empty DB (on for the hosted demo only) |
 | `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | – | When both are set, every page and API call requires a login |
 
 ---
@@ -130,6 +131,7 @@ attempts prompt injection.
 | `app/db.py` | SQLite repository (parameterised SQL, indexes, filters, retention purge) |
 | `app/main.py` | App factory, routes, dependency injection, error handlers |
 | `app/ui.py` | Template helpers: inline SVG icon set, score verdicts, initials |
+| `app/demo.py` | Optional preload of sample analyses for hosted demos with ephemeral storage |
 
 ### REST API
 
@@ -294,7 +296,7 @@ than 3 evidenced skills.
 
 ## 7. Tests
 
-Run `pytest`. There are 50 tests and none of them need network access or an API key:
+Run `pytest`. There are 53 tests and none of them need network access or an API key:
 - **Schema:** score coercion and rejection, list bounds, de-duplication, missing fields.
 - **LLM:** fenced/prose JSON extraction, the repair loop, giving up after the repair, retry on 503/429/timeout,
   no retry on 403, and that the key goes in the header and not the URL (all via `httpx.MockTransport`).
@@ -309,9 +311,11 @@ Run `pytest`. There are 50 tests and none of them need network access or an API 
 `render.yaml` is included: **New → Blueprint** in Render, connect the repo, then set `GEMINI_API_KEY`,
 `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` in the dashboard.
 
-> On Render's free tier the filesystem is ephemeral, so the SQLite file resets on redeploy or restart. That's fine
-> for a demo. In production, use a persistent disk or switch `app/db.py` to Postgres (the repository interface
-> stays the same).
+> On Render's free tier the filesystem is ephemeral: the SQLite file is wiped on every restart, redeploy or
+> wake-up from sleep. So the hosted demo sets `SEED_DEMO_DATA=true`, which preloads four sample analyses
+> (`sample_data/demo_analyses.json`, real Gemini results for the sample files, exported from a local run) whenever
+> the database is empty. The History page labels them as preloaded. In production, use a persistent disk or
+> switch `app/db.py` to Postgres (the repository interface stays the same) and leave seeding off.
 
 ## 9. Limitations and future work
 

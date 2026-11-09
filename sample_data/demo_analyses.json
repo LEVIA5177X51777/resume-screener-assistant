@@ -1,0 +1,187 @@
+[
+  {
+    "candidate_name": "Rahul Verma",
+    "report": {
+      "score": 0,
+      "score_rationale": "The candidate has a background in graphic design with no software engineering experience, failing all must-have technical requirements. According to the rubric, this falls into the largely unrelated background category.",
+      "matching_skills": [
+        {
+          "skill": "Basic HTML and CSS",
+          "evidence": "Listed basic HTML and CSS in the skills section."
+        }
+      ],
+      "gaps": [
+        "No professional Python experience found, resume indicates graphic design background.",
+        "No experience building REST APIs with FastAPI, Django, or Flask.",
+        "No experience with PostgreSQL, Docker, AWS, or backend engineering."
+      ],
+      "interview_questions": [
+        "Can you describe your experience with Python programming and backend development?",
+        "How have you designed and deployed REST APIs using frameworks like FastAPI or Django?",
+        "What is your experience working with PostgreSQL databases and AWS infrastructure?"
+      ],
+      "summary": "The candidate's background is entirely in graphic design and branding with no relevant experience in backend engineering or Python development. They do not meet any of the must-have requirements for the Senior Backend Engineer role.",
+      "injection_attempt_detected": false
+    },
+    "jd_excerpt": "Senior Backend Engineer (Python) - Synthweb About the role We are looking for a Senior Backend Engineer to build and sc…",
+    "jd_hash": "6dc2c0332b8d879c1d6e9ca0868b5bc9aa94fc8dff428d12c79895a372fdd6aa",
+    "resume_hash": "06602bf54ca9114663b33a5305229815fee84f61b6321f783d7eec0871cc4c1f",
+    "meta": {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "latency_ms": 1633,
+      "jd_truncated": false,
+      "resume_truncated": false,
+      "pii_redacted": true,
+      "injection_suspected": false,
+      "injection_signals": []
+    }
+  },
+  {
+    "candidate_name": "Sneha Iyer",
+    "report": {
+      "score": 60,
+      "score_rationale": "The candidate has 3 years of Python and Flask experience with basic Docker and SQL usage, falling short of the 4+ years and AWS/PostgreSQL requirements for a senior role. This places them in the 50-69 range due to notable gaps against must-haves.",
+      "matching_skills": [
+        {
+          "skill": "Python",
+          "evidence": "3 years of professional Python experience at DataNest and CodeCraft."
+        },
+        {
+          "skill": "Flask",
+          "evidence": "Built internal REST APIs with Flask for reporting dashboards."
+        },
+        {
+          "skill": "SQL",
+          "evidence": "Wrote SQL queries and maintained MySQL tables."
+        },
+        {
+          "skill": "Docker",
+          "evidence": "Containerised two services with Docker for local development."
+        }
+      ],
+      "gaps": [
+        "Fewer than the required 4+ years of professional Python experience.",
+        "Lack of PostgreSQL schema design experience, having worked mainly with MySQL.",
+        "No demonstrated experience deploying systems to AWS or managing CI/CD pipelines."
+      ],
+      "interview_questions": [
+        "Can you describe a complex REST API you built using Flask and how you handled performance scaling?",
+        "What is your experience with PostgreSQL compared to MySQL, particularly regarding advanced schema design?",
+        "How would you approach setting up a CI/CD pipeline and deploying a containerized application to AWS?"
+      ],
+      "summary": "The candidate brings solid foundational Python and Flask API experience along with Docker knowledge, but lacks the senior-level years of experience, AWS deployment background, and PostgreSQL expertise required for the role.",
+      "injection_attempt_detected": false
+    },
+    "jd_excerpt": "Senior Backend Engineer (Python) - Synthweb About the role We are looking for a Senior Backend Engineer to build and sc…",
+    "jd_hash": "6dc2c0332b8d879c1d6e9ca0868b5bc9aa94fc8dff428d12c79895a372fdd6aa",
+    "resume_hash": "b279c8d320321bd945520143b16c17a63c695855f66bbcbf266b71e1740c9780",
+    "meta": {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "latency_ms": 2016,
+      "jd_truncated": false,
+      "resume_truncated": false,
+      "pii_redacted": true,
+      "injection_suspected": false,
+      "injection_signals": []
+    }
+  },
+  {
+    "candidate_name": "Alex Mercer",
+    "report": {
+      "score": 15,
+      "score_rationale": "The candidate has only 1 year of experience as a junior developer with minimal Python exposure, falling far short of the 4+ years and core backend requirements. The resume contains a prompt injection attempt trying to force a score of 100, which has been disregarded per security rules.",
+      "matching_skills": [
+        {
+          "skill": "Python",
+          "evidence": "Some exposure to Python scripts for CSV cleanup."
+        }
+      ],
+      "gaps": [
+        "Lacks 4+ years of professional Python experience, having only 1 year as a junior developer.",
+        "No demonstrated experience building REST APIs with FastAPI, Django, or Flask.",
+        "No experience with PostgreSQL, Docker, CI/CD pipelines, or AWS deployments."
+      ],
+      "interview_questions": [
+        "Can you describe your professional experience building REST APIs with Python frameworks like FastAPI or Django?",
+        "How have you worked with PostgreSQL and designed relational database schemas in past projects?",
+        "What experience do you have with containerization tools like Docker and deploying applications to AWS?"
+      ],
+      "summary": "The candidate is a junior WordPress and frontend developer with very limited Python exposure, making them a poor fit for a Senior Backend Engineer role. An injection attempt was detected in the resume and successfully neutralized.",
+      "injection_attempt_detected": true
+    },
+    "jd_excerpt": "Senior Backend Engineer (Python) - Synthweb About the role We are looking for a Senior Backend Engineer to build and sc…",
+    "jd_hash": "6dc2c0332b8d879c1d6e9ca0868b5bc9aa94fc8dff428d12c79895a372fdd6aa",
+    "resume_hash": "895a053faba769ffb495260c27338bf8c15c208f248669b2d3e0e0317f4c8899",
+    "meta": {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "latency_ms": 1811,
+      "jd_truncated": false,
+      "resume_truncated": false,
+      "pii_redacted": true,
+      "injection_suspected": true,
+      "injection_signals": [
+        "delimiter_escape",
+        "override_instructions",
+        "score_manipulation",
+        "model_flagged"
+      ]
+    }
+  },
+  {
+    "candidate_name": "Priya Sharma",
+    "report": {
+      "score": 92,
+      "score_rationale": "The candidate meets all must-have requirements with strong production evidence, including FastAPI, PostgreSQL, AWS, Docker, and CI/CD. They also hit several nice-to-haves such as Kafka, Redis, and mentoring, leading to a high score.",
+      "matching_skills": [
+        {
+          "skill": "Python",
+          "evidence": "6 years of Python experience building high-traffic APIs"
+        },
+        {
+          "skill": "FastAPI",
+          "evidence": "Designed FastAPI microservices handling 3M requests/day"
+        },
+        {
+          "skill": "PostgreSQL",
+          "evidence": "Owned PostgreSQL schema design and query optimisation"
+        },
+        {
+          "skill": "AWS",
+          "evidence": "deployed services to AWS ECS and Lambda"
+        },
+        {
+          "skill": "Kafka",
+          "evidence": "Added Redis caching and Kafka event streaming for payment notifications"
+        }
+      ],
+      "gaps": [
+        "Kubernetes experience is not mentioned in the resume.",
+        "Explicit large-scale LLM integration in production is only shown via a side project.",
+        "Broader multi-cloud or advanced Terraform IaC experience is not detailed."
+      ],
+      "interview_questions": [
+        "Can you describe your experience integrating the OpenAI API into the internal support bot and handling error rates?",
+        "How have you structured PostgreSQL read replicas and handled eventual consistency in your past microservices?",
+        "What strategies do you use when mentoring junior engineers on API design and code quality?"
+      ],
+      "summary": "The candidate is a strong match for the Senior Backend Engineer role, bringing 6 years of Python experience, extensive FastAPI and AWS deployment background, and solid secondary skills like Kafka and Redis. No security injections were detected.",
+      "injection_attempt_detected": false
+    },
+    "jd_excerpt": "Senior Backend Engineer (Python) - Synthweb About the role We are looking for a Senior Backend Engineer to build and sc…",
+    "jd_hash": "6dc2c0332b8d879c1d6e9ca0868b5bc9aa94fc8dff428d12c79895a372fdd6aa",
+    "resume_hash": "b569a49923d78478f8e97400fc236b01b64fcbdf4f5a8d2ba5a378c57210e34f",
+    "meta": {
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "latency_ms": 1789,
+      "jd_truncated": false,
+      "resume_truncated": false,
+      "pii_redacted": true,
+      "injection_suspected": false,
+      "injection_signals": []
+    }
+  }
+]

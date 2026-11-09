@@ -169,6 +169,10 @@ class Database:
         with self.connect() as conn:
             return conn.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,)).rowcount > 0
 
+    def count(self) -> int:
+        with self.connect() as conn:
+            return conn.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
+
     def stats(self) -> AnalysisStats:
         bucket_sql = ", ".join(f"COALESCE(SUM(score BETWEEN {lo} AND {hi}), 0)" for _, lo, hi in SCORE_BUCKETS)
         with self.connect() as conn:

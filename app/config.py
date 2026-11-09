@@ -32,6 +32,7 @@ class Settings:
     retention_days: int = int(os.getenv("RETENTION_DAYS", "90"))
 
     database_path: str = os.getenv("DATABASE_PATH", "data/screener.db")
+    seed_demo_data: bool = _bool("SEED_DEMO_DATA", False)
 
     basic_auth_user: str = os.getenv("BASIC_AUTH_USER", "")
     basic_auth_password: str = os.getenv("BASIC_AUTH_PASSWORD", "")

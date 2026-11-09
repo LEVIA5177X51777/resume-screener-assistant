@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import ui
+from . import demo, ui
 from .config import Settings
 from .config import settings as default_settings
 from .db import Database
@@ -47,7 +47,14 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         purged = app.state.db.purge_older_than(settings.retention_days)
-        log.info("startup provider=%s model=%s purged_expired=%d", settings.llm_provider, settings.model_name, purged)
+        seeded = demo.seed_if_empty(app.state.db) if settings.seed_demo_data else 0
+        log.info(
+            "startup provider=%s model=%s purged_expired=%d demo_seeded=%d",
+            settings.llm_provider,
+            settings.model_name,
+            purged,
+            seeded,
+        )
         yield
 
     app = FastAPI(title="Resume Screener Assistant", version="1.0.0", lifespan=lifespan)
@@ -215,6 +222,7 @@ def create_app(
                 "filters": {"name": name, "min_score": min_score, "max_score": max_score, "sort": sort},
                 "error": error,
                 "stats": db.stats(),
+                "demo_mode": settings.seed_demo_data,
             },
         )
 

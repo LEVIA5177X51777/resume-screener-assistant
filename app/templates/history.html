@@ -12,6 +12,10 @@
   <a class="btn primary" href="/">{{ icon('plus', 'icon-sm') }}<span>New analysis</span></a>
 </header>
 
+{% if demo_mode %}
+<div class="banner info">{{ icon('sparkles') }}<div><strong>Demo instance.</strong> Free hosting resets storage on every restart, so four sample analyses (real Gemini results for the files in <code>sample_data/</code>) are preloaded when the database is empty. Analyses you run are added on top.</div></div>
+{% endif %}
+
 <section class="kpis">
   <div class="kpi card">
     <span class="kpi-icon">{{ icon('users') }}</span>
