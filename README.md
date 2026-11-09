@@ -38,6 +38,10 @@ uvicorn app.main:app --reload
 pytest
 ```
 
+> **Windows PowerShell:** if `activate` fails with *"running scripts is disabled on this system"*, either run
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or skip activation and call the venv directly:
+> `.venv\Scripts\python.exe -m uvicorn app.main:app --reload` and `.venv\Scripts\python.exe -m pytest`.
+
 Sample inputs live in [`sample_data/`](sample_data): one JD, plus a strong resume, a weak resume and a resume that
 attempts prompt injection.
 
