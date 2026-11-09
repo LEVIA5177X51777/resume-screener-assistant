@@ -1,0 +1,17 @@
+Rahul Verma
+rahul.v@example.com | 9876501234
+
+SUMMARY
+Graphic designer with 3 years of experience in branding and social media creatives.
+
+EXPERIENCE
+Graphic Designer - BrightAds Agency (2022 - present)
+- Created brand identities and campaign creatives for 20+ clients.
+- Designed landing page mockups in Figma; handed off to the web team.
+- Edited short-form video for Instagram and YouTube.
+
+Intern - PrintHouse (2021 - 2022)
+- Prepared print-ready layouts for brochures and packaging.
+
+SKILLS
+Figma, Adobe Photoshop, Illustrator, After Effects, basic HTML and CSS, Excel

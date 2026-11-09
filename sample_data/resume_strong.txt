@@ -1,0 +1,23 @@
+Priya Sharma
+priya.sharma@example.com | +91 98765 43210 | Bengaluru
+
+SUMMARY
+Backend engineer with 6 years of Python experience building high-traffic APIs.
+
+EXPERIENCE
+Senior Software Engineer - FinPay (2021 - present)
+- Designed FastAPI microservices handling 3M requests/day; p95 latency cut from 420ms to 120ms.
+- Owned PostgreSQL schema design and query optimisation; introduced read replicas.
+- Built CI/CD with GitHub Actions and Docker; deployed services to AWS ECS and Lambda.
+- Added Redis caching and Kafka event streaming for payment notifications.
+- Mentored 3 junior engineers.
+
+Software Engineer - ShopKart (2019 - 2021)
+- Built Django REST APIs for the order management system.
+- Wrote integration tests with pytest; raised coverage from 40% to 85%.
+
+PROJECTS
+- Internal support bot using the OpenAI API with retrieval over company docs.
+
+SKILLS
+Python, FastAPI, Django, PostgreSQL, Redis, Kafka, Docker, AWS, GitHub Actions, pytest

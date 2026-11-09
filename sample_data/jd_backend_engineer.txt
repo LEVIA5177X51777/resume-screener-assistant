@@ -1,0 +1,22 @@
+Senior Backend Engineer (Python) - Synthweb
+
+About the role
+We are looking for a Senior Backend Engineer to build and scale the APIs behind our AI products.
+
+Must have
+- 4+ years of professional Python experience
+- Building REST APIs with FastAPI, Django or Flask
+- Strong SQL and PostgreSQL schema design
+- Docker and CI/CD pipelines
+- Experience deploying to AWS (ECS, Lambda or EC2)
+
+Nice to have
+- Integrating LLM APIs (OpenAI, Anthropic, Gemini) into production systems
+- Kubernetes
+- Redis or Kafka
+- Mentoring junior engineers
+
+What you will do
+- Design and own backend services end to end
+- Improve reliability, observability and performance
+- Work closely with product and ML teams
