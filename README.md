@@ -11,6 +11,9 @@ structured, validated match report:
 Every analysis is saved to SQLite and can be browsed on a **History** page, with search by candidate name, a
 score-range filter, sorting and pagination.
 
+**Live demo:** https://resume-screener-assistant-eyze.onrender.com (login credentials are in the submission
+email; the free tier sleeps when idle, so the first load can take up to a minute)
+
 **Stack:** Python 3.12 · FastAPI · Pydantic v2 · SQLite · Jinja2 templates + vanilla JS · Google Gemini
 (swappable) · pytest
 
