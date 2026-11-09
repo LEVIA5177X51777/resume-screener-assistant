@@ -17,6 +17,35 @@ email; the free tier sleeps when idle, so the first load can take up to a minute
 **Stack:** Python 3.12 · FastAPI · Pydantic v2 · SQLite · Jinja2 templates + vanilla JS · Google Gemini
 (swappable) · pytest
 
+![Report for a strong match](docs/screenshots/05-report-strong-match.png)
+
+See all screenshots in [Screenshots](#screenshots).
+
+---
+
+## Screenshots
+
+All captured from the running app with real Gemini analyses of the files in `sample_data/` (plus one mid-level resume typed into the form).
+
+| | |
+|---|---|
+| <img src="docs/screenshots/01-new-analysis.png" width="420" alt="New analysis: paste, upload or drag-and-drop a JD and resume"> | <img src="docs/screenshots/03-samples-loaded.png" width="420" alt="One-click sample loaders, character meters, toasts"> |
+| New analysis: paste, upload or drag-and-drop a JD and resume | One-click sample loaders, character meters, toasts |
+| <img src="docs/screenshots/04-analysing.png" width="420" alt="Progress overlay while the AI runs"> | <img src="docs/screenshots/05-report-strong-match.png" width="420" alt="Report: score gauge, rubric scale, evidence-backed skills, gaps, questions"> |
+| Progress overlay while the AI runs | Report: score gauge, rubric scale, evidence-backed skills, gaps, questions |
+| <img src="docs/screenshots/06-report-prompt-injection.png" width="420" alt="Injection attack resume: flagged, ignored, scored 15 instead of 100"> | <img src="docs/screenshots/07-history-dashboard.png" width="420" alt="History: KPIs, score distribution, search, filters"> |
+| Injection attack resume: flagged, ignored, scored 15 instead of 100 | History: KPIs, score distribution, search, filters |
+| <img src="docs/screenshots/08-history-filtered-strong.png" width="420" alt="Quick filter: strong matches (70+)"> | <img src="docs/screenshots/09-history-search.png" width="420" alt="Search by candidate name"> |
+| Quick filter: strong matches (70+) | Search by candidate name |
+| <img src="docs/screenshots/02-validation-error.png" width="420" alt="Input validation before any AI call"> | <img src="docs/screenshots/10-delete-confirmation.png" width="420" alt="Delete with confirmation (supports erasure requests)"> |
+| Input validation before any AI call | Delete with confirmation (supports erasure requests) |
+| <img src="docs/screenshots/11-dark-mode-report.png" width="420" alt="Dark mode: report"> | <img src="docs/screenshots/12-dark-mode-history.png" width="420" alt="Dark mode: history"> |
+| Dark mode: report | Dark mode: history |
+| <img src="docs/screenshots/13-mobile-report.png" width="420" alt="Mobile: report"> | <img src="docs/screenshots/14-mobile-history.png" width="420" alt="Mobile: history"> |
+| Mobile: report | Mobile: history |
+| <img src="docs/screenshots/15-api-docs.png" width="420" alt="Auto-generated OpenAPI docs at /docs"> |  |
+| Auto-generated OpenAPI docs at /docs |  |
+
 ---
 
 ## 1. Setup
