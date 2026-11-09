@@ -85,6 +85,22 @@ def test_history_filters(make_client):
         assert c.get("/history", params={"name": "priya", "min_score": "abc"}).status_code == 200
 
 
+def test_basic_auth_when_configured(settings):
+    from dataclasses import replace
+
+    from fastapi.testclient import TestClient
+
+    from app.db import Database
+    from app.main import create_app
+
+    secured = replace(settings, basic_auth_user="hr", basic_auth_password="s3cret")
+    with TestClient(create_app(secured, Database(":memory:"), ScriptedProvider())) as c:
+        assert c.get("/history").status_code == 401
+        assert c.get("/history", auth=("hr", "wrong")).status_code == 401
+        assert c.get("/history", auth=("hr", "s3cret")).status_code == 200
+        assert c.get("/api/health").status_code == 200  # for platform health checks
+
+
 def test_delete(make_client):
     with make_client(ScriptedProvider(valid_report())) as c:
         rid = c.post("/api/analyses", json=_payload()).json()["id"]

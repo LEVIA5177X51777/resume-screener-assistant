@@ -1,6 +1,8 @@
 """FastAPI app: JSON API under /api, server-rendered pages for HR users."""
+import base64
 import logging
 import math
+import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
@@ -41,6 +43,24 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
     app.state.db = db or Database(settings.database_path)
     app.state.provider = provider  # built lazily so a missing key gives a clean error, not a crash
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+    if settings.basic_auth_user and settings.basic_auth_password:
+        expected = (settings.basic_auth_user, settings.basic_auth_password)
+
+        @app.middleware("http")
+        async def basic_auth(request: Request, call_next):
+            if request.url.path != "/api/health":
+                try:
+                    scheme, _, encoded = request.headers.get("authorization", "").partition(" ")
+                    user, _, password = base64.b64decode(encoded).decode().partition(":")
+                    ok = scheme.lower() == "basic" and all(
+                        secrets.compare_digest(a.encode(), b.encode()) for a, b in zip((user, password), expected))
+                except (ValueError, UnicodeDecodeError):
+                    ok = False
+                if not ok:
+                    return JSONResponse(status_code=401, content=ErrorResponse(error="Authentication required").model_dump(),
+                                        headers={"WWW-Authenticate": 'Basic realm="Resume Screener"'})
+            return await call_next(request)
 
     # ------------------------------------------------------------ dependencies
 
