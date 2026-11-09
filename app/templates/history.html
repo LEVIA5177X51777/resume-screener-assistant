@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}History · Resume Screener{% endblock %}
+{% block content %}
+<h1>History</h1>
+
+<form class="filters" method="get" action="/history">
+  <label class="field"><span>Candidate name</span>
+    <input type="search" name="name" value="{{ filters.name }}" placeholder="Search name…" maxlength="120"></label>
+  <label class="field small"><span>Min score</span>
+    <input type="number" name="min_score" min="0" max="100" value="{{ filters.min_score }}"></label>
+  <label class="field small"><span>Max score</span>
+    <input type="number" name="max_score" min="0" max="100" value="{{ filters.max_score }}"></label>
+  <label class="field small"><span>Sort</span>
+    <select name="sort">
+      {% for v, l in [("newest","Newest"),("oldest","Oldest"),("score_desc","Score ↓"),("score_asc","Score ↑")] %}
+      <option value="{{ v }}" {% if filters.sort == v %}selected{% endif %}>{{ l }}</option>
+      {% endfor %}
+    </select></label>
+  <button class="btn primary" type="submit">Filter</button>
+  <a class="btn" href="/history">Reset</a>
+</form>
+
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+<p class="muted">{{ total }} result{{ '' if total == 1 else 's' }}</p>
+{% if items %}
+<table class="table">
+  <thead><tr><th>Candidate</th><th>Score</th><th>Job</th><th>Date</th><th></th></tr></thead>
+  <tbody>
+  {% for it in items %}
+    {% set band = 'high' if it.score >= 75 else ('mid' if it.score >= 50 else 'low') %}
+    <tr>
+      <td><a href="/analyses/{{ it.id }}">{{ it.candidate_name }}</a>
+        {% if it.injection_suspected %}<span class="tag danger" title="Possible prompt injection">⚠ injection</span>{% endif %}</td>
+      <td><span class="pill {{ band }}">{{ it.score }}</span></td>
+      <td class="muted">{{ it.jd_excerpt }}</td>
+      <td class="nowrap">{{ it.created_at.strftime('%d %b %Y %H:%M') }}</td>
+      <td><a href="/analyses/{{ it.id }}">View →</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if pages > 1 %}
+<nav class="pager">
+  {% set qs = 'name=' ~ (filters.name|urlencode) ~ '&min_score=' ~ filters.min_score ~ '&max_score=' ~ filters.max_score ~ '&sort=' ~ filters.sort %}
+  {% if page > 1 %}<a class="btn" href="/history?{{ qs }}&page={{ page - 1 }}">← Prev</a>{% endif %}
+  <span>Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a class="btn" href="/history?{{ qs }}&page={{ page + 1 }}">Next →</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="empty">No analyses match these filters. <a href="/">Run a new analysis</a>.</div>
+{% endif %}
+{% endblock %}

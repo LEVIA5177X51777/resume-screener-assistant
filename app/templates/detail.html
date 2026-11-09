@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ r.candidate_name }} · Resume Screener{% endblock %}
+{% block content %}
+{% set s = r.report.score %}
+{% set band = 'high' if s >= 75 else ('mid' if s >= 50 else 'low') %}
+<a href="/history" class="back">← History</a>
+
+<div class="report-head">
+  <div class="score-ring {{ band }}"><span>{{ s }}</span><small>/100</small></div>
+  <div>
+    <h1>{{ r.candidate_name }}</h1>
+    <p class="muted">{{ r.jd_excerpt }}</p>
+    <p class="meta">{{ r.created_at.strftime('%d %b %Y, %H:%M UTC') }} · {{ r.meta.provider }} / {{ r.meta.model }} · {{ r.meta.latency_ms }} ms</p>
+  </div>
+</div>
+
+{% if r.meta.injection_suspected %}
+<div class="alert error"><strong>Possible prompt injection detected</strong> in the submitted text ({{ r.meta.injection_signals|join(', ') }}).
+  The model was instructed to ignore embedded instructions, but please review this resume manually.</div>
+{% endif %}
+{% if r.meta.jd_truncated or r.meta.resume_truncated %}
+<div class="alert warn">Input was very long, so the {{ 'job description' if r.meta.jd_truncated }}{{ ' and ' if r.meta.jd_truncated and r.meta.resume_truncated }}{{ 'resume' if r.meta.resume_truncated }} was truncated before analysis.</div>
+{% endif %}
+
+<section class="card">
+  <h2>Summary</h2>
+  <p>{{ r.report.summary }}</p>
+  <p class="muted"><strong>Why this score:</strong> {{ r.report.score_rationale }}</p>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Top matching skills</h2>
+    <ol class="list">
+      {% for m in r.report.matching_skills %}
+      <li><strong>{{ m.skill }}</strong><br><span class="muted">{{ m.evidence }}</span></li>
+      {% endfor %}
+    </ol>
+  </section>
+  <section class="card">
+    <h2>Top gaps</h2>
+    <ol class="list">{% for g in r.report.gaps %}<li>{{ g }}</li>{% endfor %}</ol>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Suggested interview questions</h2>
+  <ol class="list">{% for q in r.report.interview_questions %}<li>{{ q }}</li>{% endfor %}</ol>
+</section>
+
+<div class="actions">
+  <a class="btn" href="/">New analysis</a>
+  <a class="btn" href="/api/analyses/{{ r.id }}" target="_blank" rel="noopener">View JSON</a>
+  <button class="btn danger" id="delete-btn" data-id="{{ r.id }}">Delete record</button>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='app.js') }}"></script>{% endblock %}

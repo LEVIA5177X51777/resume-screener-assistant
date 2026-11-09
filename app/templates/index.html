@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>New analysis</h1>
+<p class="muted">Paste or upload a job description and a resume. The AI returns a match score, top matching skills, gaps and interview questions.</p>
+{% if provider == "mock" %}
+<div class="alert warn">Running in <strong>mock mode</strong> (keyword matching, no LLM). Set <code>LLM_PROVIDER</code> and an API key in <code>.env</code> for real analysis.</div>
+{% endif %}
+
+<form id="analyze-form" novalidate data-max-chars="{{ max_chars }}" data-min-chars="{{ min_chars }}">
+  <label class="field">
+    <span>Candidate name</span>
+    <input type="text" name="candidate_name" maxlength="120" placeholder="e.g. Priya Sharma" required>
+  </label>
+
+  <div class="grid-2">
+    {% for key, label in [("job_description", "Job description"), ("resume", "Resume")] %}
+    <div class="field">
+      <div class="field-head">
+        <span>{{ label }}</span>
+        <label class="upload">Upload PDF / DOCX / TXT
+          <input type="file" accept=".pdf,.docx,.txt,.md" data-target="{{ key }}" hidden>
+        </label>
+      </div>
+      <textarea name="{{ key }}" rows="16" placeholder="Paste the {{ label|lower }} here…" required></textarea>
+      <div class="counter" data-for="{{ key }}">0 characters</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="form-error" class="alert error" hidden></div>
+  <button type="submit" class="btn primary" id="submit-btn">
+    <span class="btn-label">Analyse match</span><span class="spinner" hidden></span>
+  </button>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='app.js') }}"></script>{% endblock %}
