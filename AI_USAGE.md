@@ -5,7 +5,7 @@
 | Tool | Used for |
 |---|---|
 | **Claude Code** (Claude Opus 5.5, VS Code extension) | Planning, architecture, writing code, tests and docs, running tests, smoke-testing the server, making git commits |
-| **Google Gemini API** (`gemini-flash-latest`) | The runtime LLM inside the product, which does the actual JD-vs-resume analysis |
+| **Google Gemini API** (`gemini-3.5-flash-lite`) | The runtime LLM inside the product, which does the actual JD-vs-resume analysis |
 
 **How I worked with the AI.** I gave Claude Code the assessment PDF and asked it to plan first. I then made the key
 decisions: the stack, using a free Gemini key instead of paying, adding a mock provider so I could build before the
@@ -98,11 +98,42 @@ the column, so it was misleading. It was removed. The **wildcard escaping** stay
 
 ---
 
+### 4. The AI chose a model that didn't work in practice (caught on the first live run)
+The AI set the default model to `gemini-flash-latest`, based on its own knowledge of Gemini's model names. The mock
+tests all passed, but the first real run failed. Gemini returned **`503` (model overloaded)** three times and then
+timed out, so the app correctly showed "AI service temporarily unavailable" after about 66 seconds. The key was
+fine, since there were no 401/403 errors.
+
+**Fix.** Rather than guessing again, I listed the models available to my key through the API (`GET /v1beta/models`)
+and benchmarked several on the real strong-resume analysis:
+
+| Model | Result |
+|---|---|
+| `gemini-2.5-flash`, `gemini-2.5-flash-lite` | `404`: no longer available to new users |
+| `gemini-3.8-flash` | Timed out twice (more than 80 seconds) |
+| `gemini-3.5-flash` | Worked, but took 50.7 seconds and its **first output failed validation**. The repair round-trip fixed it |
+| `gemini-flash-lite-latest` | Worked in 2.6 seconds |
+| **`gemini-3.5-flash-lite`** | **Worked in 3.0 seconds with valid output on the first try. Chosen** |
+
+I chose a **pinned version** over a `-latest` alias, because an alias can switch to a different model without
+notice and change the scores under the same prompt. The lessons: an AI's knowledge of vendor model names goes stale,
+and mocked tests can't catch problems with a real provider. The retry, timeout and friendly-error paths worked
+exactly as designed during the outage.
+
+---
+
 ## Observations from live testing with Gemini
 
-<!-- TODO (Aftab): after running the 3 sample resumes against real Gemini, note anything surprising here, e.g.
-     whether the injection resume got a low score and was flagged, whether a repair round-trip ever triggered,
-     rate-limit behaviour, and how stable the scores were across repeat runs. -->
+Live results for `sample_data/jd_backend_engineer.txt` with `gemini-3.5-flash-lite` (about 4–5 seconds each):
+
+| Resume | Score | Notes |
+|---|---|---|
+| `resume_strong.txt` (Priya) | **95** | All must-haves found with evidence. Gaps were sensible (Kubernetes is genuinely missing). Questions were specific to her projects (read replicas, her RAG bot) |
+| `resume_weak.txt` (Rahul, graphic designer) | **0** | "Largely unrelated background", per the rubric. Only 1 matching skill was returned (Basic HTML/CSS); it didn't invent 5 |
+| `resume_injection.txt` (Alex) | **15** | **The injection failed.** The model set `injection_attempt_detected=true`, said so in the summary, and scored on genuine evidence. The regex detector independently flagged `delimiter_escape`, `override_instructions` and `score_manipulation`, so HR sees a red warning |
+
+The weak-resume result confirms the assumption that skills should be allowed to number **1–5, not exactly 5**.
+Forcing exactly 5 would have pushed the model to invent matches for a graphic designer.
 
 ---
 

@@ -50,7 +50,7 @@ attempts prompt injection.
 | Variable | Default | Purpose |
 |---|---|---|
 | `LLM_PROVIDER` | `mock` | `gemini`, `openai_compat` (Groq / OpenRouter / OpenAI / Ollama) or `mock` |
-| `GEMINI_API_KEY` / `GEMINI_MODEL` | – / `gemini-flash-latest` | Gemini credentials and model |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | – / `gemini-3.5-flash-lite` | Gemini credentials and model |
 | `OPENAI_COMPAT_BASE_URL` / `_API_KEY` / `_MODEL` | Groq | Any OpenAI-compatible endpoint |
 | `MAX_INPUT_CHARS` | `12000` | Per-field limit; longer input is truncated |
 | `LLM_TIMEOUT_SECONDS` / `LLM_MAX_RETRIES` | `45` / `3` | Network resilience |
