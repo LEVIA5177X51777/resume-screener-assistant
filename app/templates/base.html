@@ -3,22 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Resume Screener Assistant{% endblock %}</title>
+  <title>{% block title %}Resume Screener{% endblock %} · Resume Screener Assistant</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M16 7l2.2 6 6 2.2-6 2.2-2.2 6-2.2-6-6-2.2 6-2.2z' fill='white'/%3E%3C/svg%3E">
+  <script>
+    try { var t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">Resume Screener <span>Assistant</span></a>
-    <nav>
-      <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">New analysis</a>
-      <a href="/history" class="{% if request.url.path.startswith('/history') %}active{% endif %}">History</a>
-      <a href="/docs" target="_blank" rel="noopener">API</a>
-    </nav>
-  </header>
-  <main class="container">
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="footer">Internal tool · AI output is advisory; final hiring decisions are made by people.</footer>
+  {% set path = request.url.path %}
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/">
+        <span class="brand-mark">{{ icon('sparkles') }}</span>
+        <span class="brand-text"><strong>Resume Screener</strong><small>AI hiring assistant</small></span>
+      </a>
+
+      <nav class="nav" aria-label="Main">
+        <span class="nav-label">Workspace</span>
+        <a href="/" class="nav-item {{ 'active' if path == '/' }}">{{ icon('plus') }}<span>New analysis</span><kbd>N</kbd></a>
+        <a href="/history" class="nav-item {{ 'active' if path.startswith('/history') or path.startswith('/analyses') }}">{{ icon('history') }}<span>History</span><kbd>H</kbd></a>
+        <span class="nav-label">Developers</span>
+        <a href="/docs" class="nav-item" target="_blank" rel="noopener">{{ icon('code') }}<span>API reference</span>{{ icon('external', 'icon-xs muted') }}</a>
+        <a href="/api/stats" class="nav-item" target="_blank" rel="noopener">{{ icon('braces') }}<span>Stats JSON</span>{{ icon('external', 'icon-xs muted') }}</a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="trust">
+          <div class="trust-row">{{ icon('eye-off', 'icon-sm') }}<span>PII redacted before AI</span></div>
+          <div class="trust-row">{{ icon('shield', 'icon-sm') }}<span>Injection guard active</span></div>
+          <div class="trust-row">{{ icon('lock', 'icon-sm') }}<span>Keys never leave server</span></div>
+        </div>
+        <div class="engine">
+          <span class="pulse {{ 'warn' if provider == 'mock' else 'ok' }}"></span>
+          <div class="engine-text">
+            <strong>{{ 'Mock engine' if provider == 'mock' else provider|replace('_', ' ')|title }}</strong>
+            <small title="{{ model }}">{{ model }}</small>
+          </div>
+          <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme (T)">
+            <span class="theme-dark">{{ icon('moon', 'icon-sm') }}</span><span class="theme-light">{{ icon('sun', 'icon-sm') }}</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <div class="main">
+      <header class="mobilebar">
+        <button class="icon-btn" id="menu-btn" type="button" aria-label="Open menu">{{ icon('menu') }}</button>
+        <a class="brand compact" href="/"><span class="brand-mark">{{ icon('sparkles') }}</span><strong>Resume Screener</strong></a>
+      </header>
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="footer">
+        <span>{{ icon('shield', 'icon-xs') }} AI output is advisory. Hiring decisions are always made by people.</span>
+        <span class="muted">v1.0 · Internal tool</span>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <script src="{{ url_for('static', path='app.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

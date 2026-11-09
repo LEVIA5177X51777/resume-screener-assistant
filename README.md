@@ -97,6 +97,7 @@ attempts prompt injection.
 | `app/service.py` | Orchestrates one analysis; framework-free so it can be unit-tested directly |
 | `app/db.py` | SQLite repository (parameterised SQL, indexes, filters, retention purge) |
 | `app/main.py` | App factory, routes, dependency injection, error handlers |
+| `app/ui.py` | Template helpers: inline SVG icon set, score verdicts, initials |
 
 ### REST API
 
@@ -107,6 +108,8 @@ attempts prompt injection.
 | `GET` | `/api/analyses/{id}` | One analysis |
 | `DELETE` | `/api/analyses/{id}` | Delete one analysis (supports the candidate's right to erasure) |
 | `POST` | `/api/extract-text` | Upload PDF/DOCX/TXT (≤ 5 MB) → extracted text |
+| `GET` | `/api/stats` | Totals, average score, strong matches, injection flags and score distribution |
+| `GET` | `/api/samples/{jd,strong,weak,injection}` | Built-in sample inputs (whitelisted, used by the UI demo buttons) |
 | `GET` | `/api/health` | Liveness check plus the active provider and model |
 
 All errors share one shape, `{"error": "...", "detail": "..."}`, with meaningful status codes: 401, 404, 422
@@ -140,8 +143,9 @@ filters use the index. A `CHECK (score BETWEEN 0 AND 100)` constraint guards the
    mock lets tests and demos run with no key and no network.
 8. **HR reviews uploaded text before analysis.** An upload fills the textarea, so HR can see what was extracted
    (useful for broken PDFs) before submitting.
-9. **The stack has no build step:** server-rendered pages with ~150 lines of JS. That is enough for an internal tool
-   and quick to change.
+9. **The stack has no build step:** server-rendered Jinja pages, one stylesheet and one vanilla-JS file, with no
+   framework or bundler. The UI still covers what HR needs (see *User interface* below) and works without JS for
+   browsing and filtering history.
 10. **The SQL is plain `sqlite3`, not an ORM.** One table doesn't need an ORM. Queries are parameterised, `ORDER BY`
     comes from a whitelist, and `LIKE` wildcards in user search are escaped (searching `_` won't match everything).
 
@@ -158,6 +162,18 @@ filters use the index. A `CHECK (score BETWEEN 0 AND 100)` constraint guards the
 - **One JD and one resume per analysis,** as the spec describes. Batch screening is future work.
 
 ---
+
+## User interface
+
+- **New analysis:** drag-and-drop or upload PDF/DOCX/TXT, one-click sample loaders (including an injection attack),
+  live character meters that warn before truncation, a `Ctrl+Enter` shortcut, and a step-by-step progress overlay.
+- **Report:** an animated score gauge with a verdict (Strong 70+, Possible 50–69, Weak <50), the score on the rubric
+  scale, skills with quoted evidence, gaps, interview questions with copy buttons, plus copy-as-text, JSON download,
+  a print/PDF layout and a confirmed delete dialog.
+- **History:** KPI cards, a clickable score-distribution chart, name search, score range, quick-filter chips,
+  sorting, pagination, and a flag on any analysis with suspected injection.
+- **Throughout:** light and dark themes (follows the OS, toggle with `T`), keyboard shortcuts (`N` new, `H` history,
+  `/` search), a responsive layout down to phone width, reduced-motion support, and accessible focus states.
 
 ## 4. Reliability and edge cases
 
@@ -246,14 +262,15 @@ than 3 evidenced skills.
 
 ## 7. Tests
 
-Run `pytest`. There are 47 tests and none of them need network access or an API key:
+Run `pytest`. There are 50 tests and none of them need network access or an API key:
 - **Schema:** score coercion and rejection, list bounds, de-duplication, missing fields.
 - **LLM:** fenced/prose JSON extraction, the repair loop, giving up after the repair, retry on 503/429/timeout,
   no retry on 403, and that the key goes in the header and not the URL (all via `httpx.MockTransport`).
 - **Text utils:** truncation, PII redaction (no false positives on year ranges), injection detection with no false
   positives on normal resumes, file-type checks.
 - **API:** create/fetch/delete, input validation (no LLM call on bad input), truncation flag, friendly 503 and 502
-  responses with nothing saved, injection flag, history filters, wildcard escaping, basic auth.
+  responses with nothing saved, injection flag, history filters, wildcard escaping, basic auth, stats,
+  sample endpoints and page rendering.
 
 ## 8. Deployment (Render)
 

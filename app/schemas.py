@@ -106,6 +106,21 @@ class AnalysisList(BaseModel):
     offset: int
 
 
+class ScoreBucket(BaseModel):
+    label: str
+    min_score: int
+    max_score: int
+    count: int
+
+
+class AnalysisStats(BaseModel):
+    total: int
+    average_score: float | None
+    strong_matches: int
+    injection_flagged: int
+    distribution: list[ScoreBucket]
+
+
 class ErrorResponse(BaseModel):
     error: str
     detail: str | None = None

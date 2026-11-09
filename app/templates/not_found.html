@@ -1,5 +1,10 @@
 {% extends "base.html" %}
+{% block title %}Not found{% endblock %}
 {% block content %}
-<h1>Not found</h1>
-<p class="muted">This analysis does not exist or was deleted. <a href="/history">Back to history</a></p>
+<div class="empty card">
+  <div class="empty-icon">{{ icon('search') }}</div>
+  <h2>Analysis not found</h2>
+  <p class="muted">It may have been deleted or expired under the retention policy.</p>
+  <a class="btn primary" href="/history">{{ icon('arrow-left', 'icon-sm') }}<span>Back to history</span></a>
+</div>
 {% endblock %}

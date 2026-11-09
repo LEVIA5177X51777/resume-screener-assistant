@@ -1,54 +1,134 @@
 {% extends "base.html" %}
-{% block title %}History · Resume Screener{% endblock %}
+{% block title %}History{% endblock %}
 {% block content %}
-<h1>History</h1>
+{% set max_bucket = (stats.distribution | map(attribute='count') | max) or 1 %}
+{% set active_range = (filters.min_score ~ '-' ~ filters.max_score) %}
 
-<form class="filters" method="get" action="/history">
-  <label class="field"><span>Candidate name</span>
-    <input type="search" name="name" value="{{ filters.name }}" placeholder="Search name…" maxlength="120"></label>
-  <label class="field small"><span>Min score</span>
-    <input type="number" name="min_score" min="0" max="100" value="{{ filters.min_score }}"></label>
-  <label class="field small"><span>Max score</span>
-    <input type="number" name="max_score" min="0" max="100" value="{{ filters.max_score }}"></label>
-  <label class="field small"><span>Sort</span>
-    <select name="sort">
-      {% for v, l in [("newest","Newest"),("oldest","Oldest"),("score_desc","Score ↓"),("score_asc","Score ↑")] %}
+<header class="page-head">
+  <div>
+    <h1>Candidate history</h1>
+    <p class="lead">Every analysis is stored here. Search, filter and revisit reports.</p>
+  </div>
+  <a class="btn primary" href="/">{{ icon('plus', 'icon-sm') }}<span>New analysis</span></a>
+</header>
+
+<section class="kpis">
+  <div class="kpi card">
+    <span class="kpi-icon">{{ icon('users') }}</span>
+    <div><span class="kpi-label">Total analyses</span><strong class="kpi-value" data-count="{{ stats.total }}">{{ stats.total }}</strong></div>
+  </div>
+  <div class="kpi card">
+    <span class="kpi-icon accent">{{ icon('gauge') }}</span>
+    <div><span class="kpi-label">Average score</span><strong class="kpi-value">{{ stats.average_score if stats.average_score is not none else '—' }}</strong></div>
+  </div>
+  <div class="kpi card">
+    <span class="kpi-icon ok">{{ icon('award') }}</span>
+    <div><span class="kpi-label">Strong matches <small>(70+)</small></span><strong class="kpi-value" data-count="{{ stats.strong_matches }}">{{ stats.strong_matches }}</strong></div>
+  </div>
+  <div class="kpi card">
+    <span class="kpi-icon danger">{{ icon('shield-alert') }}</span>
+    <div><span class="kpi-label">Injection flagged</span><strong class="kpi-value" data-count="{{ stats.injection_flagged }}">{{ stats.injection_flagged }}</strong></div>
+  </div>
+  <div class="kpi card dist">
+    <span class="kpi-label">{{ icon('bar-chart', 'icon-xs') }} Score distribution</span>
+    <div class="bars">
+      {% for b in stats.distribution %}
+      <a class="bar-col" href="/history?min_score={{ b.min_score }}&max_score={{ b.max_score }}" title="{{ b.count }} candidate{{ '' if b.count == 1 else 's' }} scored {{ b.label }}">
+        <span class="bar b{{ loop.index0 }}" style="--h: {{ (b.count / max_bucket * 100) | round }}%"><em>{{ b.count }}</em></span>
+        <small>{{ b.label }}</small>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<form class="card toolbar" method="get" action="/history" id="filter-form">
+  <label class="search">
+    {{ icon('search', 'icon-sm') }}
+    <input type="search" name="name" value="{{ filters.name }}" placeholder="Search candidates by name…" maxlength="120" aria-label="Search by candidate name">
+    <kbd>/</kbd>
+  </label>
+  <div class="range">
+    <label><span>Min</span><input type="number" name="min_score" min="0" max="100" value="{{ filters.min_score }}" placeholder="0" aria-label="Minimum score"></label>
+    <span class="dash">–</span>
+    <label><span>Max</span><input type="number" name="max_score" min="0" max="100" value="{{ filters.max_score }}" placeholder="100" aria-label="Maximum score"></label>
+  </div>
+  <label class="select">
+    <select name="sort" aria-label="Sort order">
+      {% for v, l in [("newest","Newest first"),("oldest","Oldest first"),("score_desc","Highest score"),("score_asc","Lowest score")] %}
       <option value="{{ v }}" {% if filters.sort == v %}selected{% endif %}>{{ l }}</option>
       {% endfor %}
-    </select></label>
-  <button class="btn primary" type="submit">Filter</button>
-  <a class="btn" href="/history">Reset</a>
+    </select>
+  </label>
+  <button class="btn primary" type="submit">{{ icon('filter', 'icon-sm') }}<span>Apply</span></button>
+  <div class="quick">
+    {% for label, lo, hi, band in [("All", "", "", ""), ("Strong · 70+", "70", "100", "high"), ("Possible · 50–69", "50", "69", "mid"), ("Weak · <50", "0", "49", "low")] %}
+    <a class="chip {{ band }} {{ 'active' if active_range == (lo ~ '-' ~ hi) }}" href="/history?name={{ filters.name | urlencode }}&min_score={{ lo }}&max_score={{ hi }}&sort={{ filters.sort }}">{{ label }}</a>
+    {% endfor %}
+  </div>
 </form>
 
-{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+{% if error %}<div class="banner error">{{ icon('alert') }}<div>{{ error }}</div></div>{% endif %}
 
-<p class="muted">{{ total }} result{{ '' if total == 1 else 's' }}</p>
+<div class="results-meta">
+  <span><strong>{{ total }}</strong> result{{ '' if total == 1 else 's' }}{% if filters.name %} for “{{ filters.name }}”{% endif %}</span>
+  {% if filters.name or filters.min_score or filters.max_score %}<a href="/history" class="clear-link">{{ icon('x', 'icon-xs') }} Clear filters</a>{% endif %}
+</div>
+
 {% if items %}
-<table class="table">
-  <thead><tr><th>Candidate</th><th>Score</th><th>Job</th><th>Date</th><th></th></tr></thead>
-  <tbody>
-  {% for it in items %}
-    {% set band = 'high' if it.score >= 75 else ('mid' if it.score >= 50 else 'low') %}
-    <tr>
-      <td><a href="/analyses/{{ it.id }}">{{ it.candidate_name }}</a>
-        {% if it.injection_suspected %}<span class="tag danger" title="Possible prompt injection">⚠ injection</span>{% endif %}</td>
-      <td><span class="pill {{ band }}">{{ it.score }}</span></td>
-      <td class="muted">{{ it.jd_excerpt }}</td>
-      <td class="nowrap">{{ it.created_at.strftime('%d %b %Y %H:%M') }}</td>
-      <td><a href="/analyses/{{ it.id }}">View →</a></td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card table-card">
+  <table class="table">
+    <thead><tr><th>Candidate</th><th>Score</th><th class="hide-md">Role</th><th class="hide-sm">Analysed</th><th></th></tr></thead>
+    <tbody>
+    {% for it in items %}
+      {% set v = verdict(it.score) %}
+      <tr data-href="/analyses/{{ it.id }}" tabindex="0">
+        <td>
+          <div class="person">
+            <span class="avatar a{{ it.id % 6 }}">{{ it.candidate_name | initials }}</span>
+            <div>
+              <a href="/analyses/{{ it.id }}" class="person-name">{{ it.candidate_name }}</a>
+              <span class="verdict-text {{ v.band }}">{{ v.label }}</span>
+              {% if it.injection_suspected %}<span class="tag danger" title="Possible prompt injection">{{ icon('shield-alert', 'icon-xs') }} Flagged</span>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="score-cell">
+            <strong class="{{ v.band }}">{{ it.score }}</strong>
+            <span class="score-track"><span class="{{ v.band }}" style="width: {{ it.score }}%"></span></span>
+          </div>
+        </td>
+        <td class="hide-md muted role-cell">{{ it.jd_excerpt }}</td>
+        <td class="hide-sm nowrap muted"><time data-ts="{{ it.created_at.isoformat() }}">{{ it.created_at.strftime('%d %b %Y %H:%M') }}</time></td>
+        <td class="row-go">{{ icon('chevron-right', 'icon-sm') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 {% if pages > 1 %}
-<nav class="pager">
-  {% set qs = 'name=' ~ (filters.name|urlencode) ~ '&min_score=' ~ filters.min_score ~ '&max_score=' ~ filters.max_score ~ '&sort=' ~ filters.sort %}
-  {% if page > 1 %}<a class="btn" href="/history?{{ qs }}&page={{ page - 1 }}">← Prev</a>{% endif %}
-  <span>Page {{ page }} of {{ pages }}</span>
-  {% if page < pages %}<a class="btn" href="/history?{{ qs }}&page={{ page + 1 }}">Next →</a>{% endif %}
+{% set qs = 'name=' ~ (filters.name | urlencode) ~ '&min_score=' ~ filters.min_score ~ '&max_score=' ~ filters.max_score ~ '&sort=' ~ filters.sort %}
+<nav class="pager" aria-label="Pagination">
+  {% if page > 1 %}<a class="btn" href="/history?{{ qs }}&page={{ page - 1 }}">{{ icon('chevron-left', 'icon-sm') }}<span>Previous</span></a>{% else %}<span></span>{% endif %}
+  <span class="muted">Page <strong>{{ page }}</strong> of {{ pages }}</span>
+  {% if page < pages %}<a class="btn" href="/history?{{ qs }}&page={{ page + 1 }}"><span>Next</span>{{ icon('chevron-right', 'icon-sm') }}</a>{% else %}<span></span>{% endif %}
 </nav>
 {% endif %}
+
 {% else %}
-<div class="empty">No analyses match these filters. <a href="/">Run a new analysis</a>.</div>
+<div class="empty card">
+  <div class="empty-icon">{{ icon('inbox') }}</div>
+  {% if stats.total %}
+  <h2>No matches for these filters</h2>
+  <p class="muted">Try a different name or widen the score range.</p>
+  <a class="btn" href="/history">{{ icon('x', 'icon-sm') }}<span>Clear filters</span></a>
+  {% else %}
+  <h2>No analyses yet</h2>
+  <p class="muted">Run your first screening and it will appear here.</p>
+  <a class="btn primary" href="/">{{ icon('sparkles', 'icon-sm') }}<span>Start an analysis</span></a>
+  {% endif %}
+</div>
 {% endif %}
 {% endblock %}

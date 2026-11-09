@@ -1,57 +1,120 @@
 {% extends "base.html" %}
-{% block title %}{{ r.candidate_name }} · Resume Screener{% endblock %}
+{% block title %}{{ r.candidate_name }}{% endblock %}
 {% block content %}
 {% set s = r.report.score %}
-{% set band = 'high' if s >= 75 else ('mid' if s >= 50 else 'low') %}
-<a href="/history" class="back">← History</a>
+{% set v = verdict(s) %}
+{% set circumference = 339.29 %}
 
-<div class="report-head">
-  <div class="score-ring {{ band }}"><span>{{ s }}</span><small>/100</small></div>
-  <div>
-    <h1>{{ r.candidate_name }}</h1>
-    <p class="muted">{{ r.jd_excerpt }}</p>
-    <p class="meta">{{ r.created_at.strftime('%d %b %Y, %H:%M UTC') }} · {{ r.meta.provider }} / {{ r.meta.model }} · {{ r.meta.latency_ms }} ms</p>
-  </div>
-</div>
+<nav class="crumbs">
+  <a href="/history">{{ icon('arrow-left', 'icon-sm') }} History</a>
+  <span>/</span><span class="muted">Analysis #{{ r.id }}</span>
+</nav>
 
 {% if r.meta.injection_suspected %}
-<div class="alert error"><strong>Possible prompt injection detected</strong> in the submitted text ({{ r.meta.injection_signals|join(', ') }}).
-  The model was instructed to ignore embedded instructions, but please review this resume manually.</div>
-{% endif %}
-{% if r.meta.jd_truncated or r.meta.resume_truncated %}
-<div class="alert warn">Input was very long, so the {{ 'job description' if r.meta.jd_truncated }}{{ ' and ' if r.meta.jd_truncated and r.meta.resume_truncated }}{{ 'resume' if r.meta.resume_truncated }} was truncated before analysis.</div>
+<div class="banner danger">
+  {{ icon('shield-alert') }}
+  <div>
+    <strong>Possible prompt injection detected.</strong>
+    The submitted text contains instructions aimed at the AI. They were treated as data and ignored, and the score reflects genuine evidence only. Please review this resume manually.
+    <div class="signal-list">{% for sig in r.meta.injection_signals %}<code>{{ sig }}</code>{% endfor %}</div>
+  </div>
+</div>
 {% endif %}
 
-<section class="card">
-  <h2>Summary</h2>
-  <p>{{ r.report.summary }}</p>
-  <p class="muted"><strong>Why this score:</strong> {{ r.report.score_rationale }}</p>
+<section class="report-hero card">
+  <div class="gauge {{ v.band }}" role="img" aria-label="Match score {{ s }} out of 100">
+    <svg viewBox="0 0 120 120">
+      <circle class="gauge-track" cx="60" cy="60" r="54"/>
+      <circle class="gauge-fill" cx="60" cy="60" r="54"
+              style="--circ: {{ circumference }}; --offset: {{ '%.2f' | format(circumference * (1 - s / 100)) }}"/>
+    </svg>
+    <div class="gauge-value"><strong data-count="{{ s }}">{{ s }}</strong><small>/ 100</small></div>
+  </div>
+
+  <div class="report-id">
+    <span class="verdict {{ v.band }}">{{ icon('award', 'icon-sm') }}{{ v.label }}</span>
+    <h1>{{ r.candidate_name }}</h1>
+    <p class="muted jd-line">{{ icon('briefcase', 'icon-sm') }}<span>{{ r.jd_excerpt }}</span></p>
+    <div class="meta-pills">
+      <span title="Analysed at">{{ icon('clock', 'icon-xs') }}<time data-ts="{{ r.created_at.isoformat() }}">{{ r.created_at.strftime('%d %b %Y, %H:%M UTC') }}</time></span>
+      <span title="Model">{{ icon('cpu', 'icon-xs') }}{{ r.meta.model }}</span>
+      <span title="Latency">{{ icon('zap', 'icon-xs') }}{{ "%.1f" | format(r.meta.latency_ms / 1000) }}s</span>
+      {% if r.meta.pii_redacted %}<span class="ok" title="Email, phone, profile URLs and name were removed before the AI call">{{ icon('eye-off', 'icon-xs') }}PII redacted</span>{% endif %}
+      {% if r.meta.jd_truncated or r.meta.resume_truncated %}<span class="warn" title="Input exceeded the length limit and was truncated">{{ icon('scissors', 'icon-xs') }}Truncated</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="report-actions">
+    <button class="btn" type="button" data-copy-report>{{ icon('copy', 'icon-sm') }}<span>Copy</span></button>
+    <a class="btn" href="/api/analyses/{{ r.id }}" download="analysis-{{ r.id }}.json">{{ icon('download', 'icon-sm') }}<span>JSON</span></a>
+    <button class="btn" type="button" onclick="window.print()">{{ icon('printer', 'icon-sm') }}<span>Print</span></button>
+    <button class="btn danger-ghost" type="button" data-delete="{{ r.id }}" data-name="{{ r.candidate_name }}">{{ icon('trash', 'icon-sm') }}</button>
+  </div>
 </section>
 
-<div class="grid-2">
+<section class="card summary-card">
+  <div class="section-head"><span class="chip-icon">{{ icon('sparkles', 'icon-sm') }}</span><h2>AI summary</h2></div>
+  <p class="summary">{{ r.report.summary }}</p>
+  <div class="rationale">
+    <span class="label">{{ icon('gauge', 'icon-sm') }} Why {{ s }}?</span>
+    <p>{{ r.report.score_rationale }}</p>
+  </div>
+  <div class="scale" aria-hidden="true">
+    <div class="scale-bar"><span class="scale-marker" style="left: {{ s }}%"></span></div>
+    <div class="scale-labels"><span>0 · Unrelated</span><span>25</span><span>50</span><span>70 · Strong</span><span>100</span></div>
+  </div>
+</section>
+
+<div class="report-grid">
   <section class="card">
-    <h2>Top matching skills</h2>
-    <ol class="list">
+    <div class="section-head"><span class="chip-icon ok">{{ icon('check-circle', 'icon-sm') }}</span><h2>Top matching skills</h2><span class="count">{{ r.report.matching_skills|length }}</span></div>
+    <ul class="skills">
       {% for m in r.report.matching_skills %}
-      <li><strong>{{ m.skill }}</strong><br><span class="muted">{{ m.evidence }}</span></li>
+      <li class="skill" style="--i: {{ loop.index0 }}">
+        <span class="rank">{{ loop.index }}</span>
+        <div><strong>{{ m.skill }}</strong><p class="evidence">“{{ m.evidence }}”</p></div>
+      </li>
       {% endfor %}
-    </ol>
+    </ul>
   </section>
+
   <section class="card">
-    <h2>Top gaps</h2>
-    <ol class="list">{% for g in r.report.gaps %}<li>{{ g }}</li>{% endfor %}</ol>
+    <div class="section-head"><span class="chip-icon warn">{{ icon('target', 'icon-sm') }}</span><h2>Top gaps</h2><span class="count">{{ r.report.gaps|length }}</span></div>
+    <ul class="gaps">
+      {% for g in r.report.gaps %}
+      <li class="gap" style="--i: {{ loop.index0 }}">{{ icon('alert', 'icon-sm') }}<span>{{ g }}</span></li>
+      {% endfor %}
+    </ul>
   </section>
 </div>
 
 <section class="card">
-  <h2>Suggested interview questions</h2>
-  <ol class="list">{% for q in r.report.interview_questions %}<li>{{ q }}</li>{% endfor %}</ol>
+  <div class="section-head">
+    <span class="chip-icon accent">{{ icon('message', 'icon-sm') }}</span><h2>Suggested interview questions</h2>
+    <button class="btn sm ghost push" type="button" data-copy-questions>{{ icon('copy', 'icon-xs') }}<span>Copy all</span></button>
+  </div>
+  <ol class="questions">
+    {% for q in r.report.interview_questions %}
+    <li class="question" style="--i: {{ loop.index0 }}">
+      <span class="qnum">Q{{ loop.index }}</span>
+      <p>{{ q }}</p>
+      <button class="icon-btn sm" type="button" data-copy-text="{{ q }}" title="Copy question">{{ icon('copy', 'icon-sm') }}</button>
+    </li>
+    {% endfor %}
+  </ol>
 </section>
 
-<div class="actions">
-  <a class="btn" href="/">New analysis</a>
-  <a class="btn" href="/api/analyses/{{ r.id }}" target="_blank" rel="noopener">View JSON</a>
-  <button class="btn danger" id="delete-btn" data-id="{{ r.id }}">Delete record</button>
-</div>
+<script type="application/json" id="report-data">{{ r.model_dump(mode='json') | tojson }}</script>
+
+<dialog class="modal" id="delete-dialog">
+  <form method="dialog">
+    <div class="modal-icon">{{ icon('trash') }}</div>
+    <h2>Delete this analysis?</h2>
+    <p class="muted">The report for <strong id="delete-name"></strong> will be permanently removed. This supports candidate erasure requests and cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn danger" value="confirm" id="delete-confirm">{{ icon('trash', 'icon-sm') }}<span>Delete permanently</span></button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', path='app.js') }}"></script>{% endblock %}

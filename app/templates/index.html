@@ -1,36 +1,90 @@
 {% extends "base.html" %}
+{% block title %}New analysis{% endblock %}
 {% block content %}
-<h1>New analysis</h1>
-<p class="muted">Paste or upload a job description and a resume. The AI returns a match score, top matching skills, gaps and interview questions.</p>
+<section class="hero">
+  <div>
+    <span class="eyebrow">{{ icon('zap', 'icon-xs') }} AI-powered screening</span>
+    <h1>Screen a candidate in seconds</h1>
+    <p class="lead">Compare a resume against a job description and get a validated match score, evidence-backed skills, gaps and tailored interview questions.</p>
+  </div>
+  <ol class="steps" aria-label="How it works">
+    <li><span>1</span>Add job &amp; resume</li>
+    <li><span>2</span>AI analyses the match</li>
+    <li><span>3</span>Review the report</li>
+  </ol>
+</section>
+
 {% if provider == "mock" %}
-<div class="alert warn">Running in <strong>mock mode</strong> (keyword matching, no LLM). Set <code>LLM_PROVIDER</code> and an API key in <code>.env</code> for real analysis.</div>
+<div class="banner warn">{{ icon('alert') }}<div><strong>Mock engine active.</strong> Results come from keyword matching, not an LLM. Set <code>LLM_PROVIDER</code> and an API key in <code>.env</code> for real analysis.</div></div>
 {% endif %}
 
 <form id="analyze-form" novalidate data-max-chars="{{ max_chars }}" data-min-chars="{{ min_chars }}">
-  <label class="field">
-    <span>Candidate name</span>
-    <input type="text" name="candidate_name" maxlength="120" placeholder="e.g. Priya Sharma" required>
-  </label>
+  <div class="card candidate-card">
+    <div class="field-icon">{{ icon('user') }}</div>
+    <label class="field grow">
+      <span class="label">Candidate name</span>
+      <input type="text" name="candidate_name" maxlength="120" placeholder="e.g. Priya Sharma" autocomplete="off" required>
+    </label>
+    <div class="privacy-note">{{ icon('eye-off', 'icon-sm') }}<span>The name is stored for search only and is <strong>never sent to the AI</strong>.</span></div>
+  </div>
 
-  <div class="grid-2">
-    {% for key, label in [("job_description", "Job description"), ("resume", "Resume")] %}
-    <div class="field">
-      <div class="field-head">
-        <span>{{ label }}</span>
-        <label class="upload">Upload PDF / DOCX / TXT
+  <div class="editor-grid">
+    {% for key, label, ico, samples in [
+      ("job_description", "Job description", "briefcase", [("jd", "Sample JD")]),
+      ("resume", "Resume", "file", [("strong", "Strong"), ("weak", "Weak"), ("injection", "Injection attack")])
+    ] %}
+    <div class="card editor" data-editor="{{ key }}">
+      <div class="editor-head">
+        <div class="editor-title"><span class="chip-icon">{{ icon(ico, 'icon-sm') }}</span><h2>{{ label }}</h2></div>
+        <div class="editor-tools">
+          <span class="muted small">Try:</span>
+          {% for sid, slabel in samples %}
+          <button type="button" class="chip {{ 'chip-danger' if sid == 'injection' }}" data-sample="{{ sid }}" data-target="{{ key }}">{{ slabel }}</button>
+          {% endfor %}
+          <button type="button" class="icon-btn sm" data-clear="{{ key }}" title="Clear">{{ icon('x', 'icon-sm') }}</button>
+        </div>
+      </div>
+      <div class="dropzone" data-target="{{ key }}">
+        <textarea name="{{ key }}" rows="14" placeholder="Paste the {{ label|lower }} here, or drop a PDF / DOCX / TXT file…" required></textarea>
+        <div class="drop-overlay">{{ icon('upload') }}<strong>Drop file to extract text</strong><span>PDF, DOCX or TXT · max 5 MB</span></div>
+      </div>
+      <div class="editor-foot">
+        <label class="upload-btn">{{ icon('upload', 'icon-sm') }}<span>Upload file</span>
           <input type="file" accept=".pdf,.docx,.txt,.md" data-target="{{ key }}" hidden>
         </label>
+        <div class="meter" data-for="{{ key }}">
+          <div class="meter-bar"><span></span></div>
+          <span class="meter-text">0 / {{ "{:,}".format(max_chars) }}</span>
+        </div>
       </div>
-      <textarea name="{{ key }}" rows="16" placeholder="Paste the {{ label|lower }} here…" required></textarea>
-      <div class="counter" data-for="{{ key }}">0 characters</div>
     </div>
     {% endfor %}
   </div>
 
-  <div id="form-error" class="alert error" hidden></div>
-  <button type="submit" class="btn primary" id="submit-btn">
-    <span class="btn-label">Analyse match</span><span class="spinner" hidden></span>
-  </button>
+  <div class="banner error" id="form-error" hidden>{{ icon('alert') }}<div class="msg"></div></div>
+
+  <div class="submit-bar">
+    <div class="submit-hints">
+      <span>{{ icon('shield', 'icon-sm') }} Injection-protected</span>
+      <span>{{ icon('check-circle', 'icon-sm') }} Schema-validated output</span>
+      <span class="hide-sm">{{ icon('keyboard', 'icon-sm') }} <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run</span>
+    </div>
+    <button type="submit" class="btn primary lg" id="submit-btn">{{ icon('sparkles', 'icon-sm') }}<span>Analyse match</span></button>
+  </div>
 </form>
+
+<div class="overlay" id="progress" hidden>
+  <div class="progress-card" role="dialog" aria-modal="true" aria-labelledby="progress-title">
+    <div class="orb"><span></span><span></span><span></span>{{ icon('sparkles') }}</div>
+    <h2 id="progress-title">Analysing candidate</h2>
+    <p class="muted">This usually takes 3–10 seconds.</p>
+    <ol class="progress-steps">
+      <li>{{ icon('eye-off', 'icon-sm') }}Redacting personal data</li>
+      <li>{{ icon('shield', 'icon-sm') }}Scanning for prompt injection</li>
+      <li>{{ icon('cpu', 'icon-sm') }}Running AI analysis</li>
+      <li>{{ icon('check-circle', 'icon-sm') }}Validating structured output</li>
+      <li>{{ icon('inbox', 'icon-sm') }}Saving to history</li>
+    </ol>
+  </div>
+</div>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', path='app.js') }}"></script>{% endblock %}

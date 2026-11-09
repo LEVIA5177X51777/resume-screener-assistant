@@ -6,7 +6,16 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 
-from .schemas import AnalysisMeta, AnalysisRecord, AnalysisSummary, MatchReport
+from .schemas import AnalysisMeta, AnalysisRecord, AnalysisStats, AnalysisSummary, MatchReport, ScoreBucket
+
+STRONG_MATCH_THRESHOLD = 70
+SCORE_BUCKETS = [
+    ("0–24", 0, 24),
+    ("25–49", 25, 49),
+    ("50–69", 50, 69),
+    ("70–89", 70, 89),
+    ("90–100", 90, 100),
+]
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS analyses (
@@ -159,6 +168,26 @@ class Database:
     def delete(self, analysis_id: int) -> bool:
         with self.connect() as conn:
             return conn.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,)).rowcount > 0
+
+    def stats(self) -> AnalysisStats:
+        bucket_sql = ", ".join(f"COALESCE(SUM(score BETWEEN {lo} AND {hi}), 0)" for _, lo, hi in SCORE_BUCKETS)
+        with self.connect() as conn:
+            row = conn.execute(
+                f"""SELECT COUNT(*), AVG(score), COALESCE(SUM(score >= {STRONG_MATCH_THRESHOLD}), 0),
+                           COALESCE(SUM(injection_suspected), 0), {bucket_sql}
+                    FROM analyses"""
+            ).fetchone()
+        total, avg, strong, flagged, *counts = row
+        return AnalysisStats(
+            total=total,
+            average_score=round(avg, 1) if avg is not None else None,
+            strong_matches=strong,
+            injection_flagged=flagged,
+            distribution=[
+                ScoreBucket(label=label, min_score=lo, max_score=hi, count=count)
+                for (label, lo, hi), count in zip(SCORE_BUCKETS, counts, strict=True)
+            ],
+        )
 
     def purge_older_than(self, days: int) -> int:
         cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")

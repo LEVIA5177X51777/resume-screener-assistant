@@ -106,3 +106,33 @@ def test_delete(make_client):
         missing = c.get(f"/api/analyses/{rid}")
         assert missing.status_code == 404 and missing.json()["error"] == "Analysis not found"
         assert c.delete(f"/api/analyses/{rid}").status_code == 404
+
+
+def test_stats(make_client):
+    provider = ScriptedProvider(valid_report(score=92), valid_report(score=40), valid_report(score=71))
+    with make_client(provider) as c:
+        empty = c.get("/api/stats").json()
+        assert empty["total"] == 0 and empty["average_score"] is None
+        for name in ["A One", "B Two", "C Three"]:
+            c.post("/api/analyses", json=_payload(name=name))
+        stats = c.get("/api/stats").json()
+    assert stats["total"] == 3 and stats["average_score"] == 67.7 and stats["strong_matches"] == 2
+    assert [b["count"] for b in stats["distribution"]] == [0, 1, 0, 1, 1]
+
+
+def test_samples(make_client):
+    with make_client(ScriptedProvider()) as c:
+        resume = c.get("/api/samples/strong").json()
+        assert resume["candidate_name"] == "Priya Sharma" and "FastAPI" in resume["text"]
+        assert c.get("/api/samples/jd").json()["candidate_name"] is None
+        assert c.get("/api/samples/..%2F.env").status_code in (404, 422)
+        assert c.get("/api/samples/unknown").status_code == 422
+
+
+def test_pages_render(make_client):
+    with make_client(ScriptedProvider(valid_report())) as c:
+        rid = c.post("/api/analyses", json=_payload()).json()["id"]
+        for path in ["/", "/history", f"/analyses/{rid}", "/history?min_score=70&max_score=100"]:
+            res = c.get(path)
+            assert res.status_code == 200 and "Resume Screener" in res.text
+        assert c.get("/analyses/9999").status_code == 404

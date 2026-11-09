@@ -15,11 +15,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from . import ui
 from .config import Settings
 from .config import settings as default_settings
 from .db import Database
 from .llm import LLMError, Provider, get_provider
-from .schemas import AnalysisList, AnalysisRecord, AnalyzeRequest, ErrorResponse
+from .schemas import AnalysisList, AnalysisRecord, AnalysisStats, AnalyzeRequest, ErrorResponse
 from .service import run_analysis
 from .text_utils import InputError, extract_text
 
@@ -27,9 +28,17 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("screener")
 
 BASE_DIR = Path(__file__).parent
+SAMPLE_DIR = BASE_DIR.parent / "sample_data"
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 SortOption = Literal["newest", "oldest", "score_desc", "score_asc"]
+SampleName = Literal["jd", "strong", "weak", "injection"]
+SAMPLES: dict[str, tuple[str, str | None]] = {
+    "jd": ("jd_backend_engineer.txt", None),
+    "strong": ("resume_strong.txt", "Priya Sharma"),
+    "weak": ("resume_weak.txt", "Rahul Verma"),
+    "injection": ("resume_injection.txt", "Alex Mercer"),
+}
 
 
 def create_app(
@@ -46,6 +55,7 @@ def create_app(
     app.state.db = db or Database(settings.database_path)
     app.state.provider = provider
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+    ui.register(templates.env, settings)
 
     if settings.basic_auth_user and settings.basic_auth_password:
         expected = (settings.basic_auth_user, settings.basic_auth_password)
@@ -148,21 +158,26 @@ def create_app(
         if not db.delete(analysis_id):
             raise HTTPException(404, "Analysis not found")
 
+    @app.get("/api/stats", response_model=AnalysisStats)
+    def stats(db: Database = Depends(get_db)):
+        return db.stats()
+
     @app.post("/api/extract-text")
     async def extract(file: UploadFile = File(...)):
         data = await file.read()
         return {"filename": file.filename, "text": extract_text(file.filename or "", data)}
+
+    @app.get("/api/samples/{name}")
+    def sample(name: SampleName):
+        filename, candidate_name = SAMPLES[name]
+        return {"candidate_name": candidate_name, "text": (SAMPLE_DIR / filename).read_text(encoding="utf-8")}
 
     @app.get("/", include_in_schema=False)
     def index_page(request: Request):
         return templates.TemplateResponse(
             request,
             "index.html",
-            {
-                "provider": settings.llm_provider,
-                "max_chars": settings.max_input_chars,
-                "min_chars": settings.min_input_chars,
-            },
+            {"max_chars": settings.max_input_chars, "min_chars": settings.min_input_chars},
         )
 
     @app.get("/history", include_in_schema=False)
@@ -199,6 +214,7 @@ def create_app(
                 "pages": max(1, math.ceil(total / per_page)),
                 "filters": {"name": name, "min_score": min_score, "max_score": max_score, "sort": sort},
                 "error": error,
+                "stats": db.stats(),
             },
         )
 

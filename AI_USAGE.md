@@ -31,7 +31,7 @@ planned for 24.
 
 **Why it mattered.** This led to two design decisions:
 - Use **Google Gemini's free tier**, which needs no card.
-- Build a **pluggable provider layer** with an offline `mock` provider. That let the whole app and its 47 tests be
+- Build a **pluggable provider layer** with an offline `mock` provider. That let the whole app and its 50 tests be
   built and run without a key, and switching to a real model is one line in `.env`.
 
 The AI was also clear that submitting with only the mock would be dishonest and would fail the brief, so the demo
