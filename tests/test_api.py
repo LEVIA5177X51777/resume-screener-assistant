@@ -105,5 +105,6 @@ def test_delete(make_client):
     with make_client(ScriptedProvider(valid_report())) as c:
         rid = c.post("/api/analyses", json=_payload()).json()["id"]
         assert c.delete(f"/api/analyses/{rid}").status_code == 204
-        assert c.get(f"/api/analyses/{rid}").status_code == 404
+        missing = c.get(f"/api/analyses/{rid}")
+        assert missing.status_code == 404 and missing.json()["error"] == "Analysis not found"
         assert c.delete(f"/api/analyses/{rid}").status_code == 404
