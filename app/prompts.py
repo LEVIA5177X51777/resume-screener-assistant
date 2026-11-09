@@ -1,4 +1,4 @@
-"""Prompt templates. Kept separate from transport code so they can be reviewed and versioned on their own."""
+"""Prompt templates and response schema for match analysis."""
 
 PROMPT_VERSION = "v1"
 
@@ -63,7 +63,6 @@ def build_repair_prompt(previous_output: str, error: str) -> str:
     )
 
 
-# JSON schema handed to providers that support constrained decoding (Gemini responseSchema).
 RESPONSE_SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -83,11 +82,21 @@ RESPONSE_SCHEMA = {
         "injection_attempt_detected": {"type": "BOOLEAN"},
     },
     "required": [
-        "score", "score_rationale", "matching_skills", "gaps", "interview_questions", "summary",
+        "score",
+        "score_rationale",
+        "matching_skills",
+        "gaps",
+        "interview_questions",
+        "summary",
         "injection_attempt_detected",
     ],
     "propertyOrdering": [
-        "matching_skills", "gaps", "score_rationale", "score", "interview_questions", "summary",
+        "matching_skills",
+        "gaps",
+        "score_rationale",
+        "score",
+        "interview_questions",
+        "summary",
         "injection_attempt_detected",
     ],
 }

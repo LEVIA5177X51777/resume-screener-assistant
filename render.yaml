@@ -14,7 +14,7 @@ services:
       - key: GEMINI_MODEL
         value: gemini-3.5-flash-lite
       - key: GEMINI_API_KEY
-        sync: false        # entered in the Render dashboard, never committed
+        sync: false
       - key: BASIC_AUTH_USER
         sync: false
       - key: BASIC_AUTH_PASSWORD

@@ -1,4 +1,5 @@
-"""Input pre-processing: file extraction, truncation, PII redaction and prompt-injection heuristics."""
+"""Text extraction, normalisation, PII redaction and prompt-injection detection."""
+
 import hashlib
 import io
 import re
@@ -8,10 +9,8 @@ ALLOWED_EXTENSIONS = (".pdf", ".docx", ".txt", ".md")
 
 
 class InputError(ValueError):
-    """User-facing input problem (message is safe to show in the UI)."""
+    """Invalid user input. The message is safe to display."""
 
-
-# ---------- file extraction ----------
 
 def extract_text(filename: str, data: bytes) -> str:
     name = (filename or "").lower()
@@ -34,15 +33,15 @@ def extract_text(filename: str, data: bytes) -> str:
             text = data.decode("utf-8", errors="replace")
     except InputError:
         raise
-    except Exception as exc:  # corrupt / encrypted files
+    except Exception as exc:
         raise InputError(f"Could not read '{filename}'. Is the file corrupt or password-protected?") from exc
     text = normalize(text)
     if not text:
-        raise InputError(f"No text found in '{filename}'. Scanned/image PDFs are not supported; paste the text instead.")
+        raise InputError(
+            f"No text found in '{filename}'. Scanned/image PDFs are not supported; paste the text instead."
+        )
     return text
 
-
-# ---------- normalisation & truncation ----------
 
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
@@ -55,7 +54,7 @@ def normalize(text: str) -> str:
 
 
 def truncate(text: str, max_chars: int) -> tuple[str, bool]:
-    """Cut to max_chars, preferring a paragraph/line boundary so we don't split mid-sentence."""
+    """Truncate text to max_chars, preferring a line boundary."""
     if len(text) <= max_chars:
         return text, False
     cut = text[:max_chars]
@@ -65,15 +64,13 @@ def truncate(text: str, max_chars: int) -> tuple[str, bool]:
     return cut.rstrip() + "\n[...truncated...]", True
 
 
-# ---------- PII redaction ----------
-
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE = re.compile(r"(?<![\w])\+?\d[\d\s().-]{8,}\d(?![\w])")
 _URL_PROFILE = re.compile(r"https?://(?:www\.)?(?:linkedin|facebook|instagram|twitter|x)\.com/\S+", re.I)
 
 
 def redact_pii(text: str, candidate_name: str | None = None) -> str:
-    """Strip direct identifiers the model does not need to judge skills."""
+    """Replace direct personal identifiers with placeholders."""
     text = _EMAIL.sub("[EMAIL]", text)
     text = _PHONE.sub(lambda m: "[PHONE]" if sum(c.isdigit() for c in m.group()) >= 10 else m.group(), text)
     text = _URL_PROFILE.sub("[PROFILE_URL]", text)
@@ -83,8 +80,6 @@ def redact_pii(text: str, candidate_name: str | None = None) -> str:
             text = re.sub(rf"\b{re.escape(part)}\b", "[CANDIDATE]", text, flags=re.I)
     return text
 
-
-# ---------- prompt-injection heuristics ----------
 
 INJECTION_PATTERNS: dict[str, re.Pattern] = {
     "override_instructions": re.compile(
@@ -109,11 +104,9 @@ def detect_injection(text: str) -> list[str]:
 
 
 def neutralize_delimiters(text: str) -> str:
-    """Stop user text from closing our XML-style data tags."""
+    """Prevent user text from closing prompt delimiter tags."""
     return re.sub(r"<(/?)\s*(resume|job_description)\s*>", r"(\1\2)", text, flags=re.I)
 
-
-# ---------- misc ----------
 
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()

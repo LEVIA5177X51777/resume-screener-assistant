@@ -1,9 +1,10 @@
-"""SQLite persistence. Plain sqlite3 + parameterised SQL: small, explicit, no ORM magic."""
+"""SQLite persistence layer for analyses."""
+
 import json
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from .schemas import AnalysisMeta, AnalysisRecord, AnalysisSummary, MatchReport
 
@@ -16,8 +17,8 @@ CREATE TABLE IF NOT EXISTS analyses (
     jd_excerpt          TEXT    NOT NULL,
     jd_hash             TEXT    NOT NULL,
     resume_hash         TEXT    NOT NULL,
-    jd_text             TEXT,               -- only stored when STORE_RAW_TEXT=true
-    resume_text         TEXT,               -- only stored when STORE_RAW_TEXT=true
+    jd_text             TEXT,
+    resume_text         TEXT,
     provider            TEXT    NOT NULL,
     model               TEXT    NOT NULL,
     latency_ms          INTEGER NOT NULL,
@@ -46,7 +47,6 @@ class Database:
         self.path = path
         if path != ":memory:":
             os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        # Keep one connection for :memory: so tests share the same DB.
         self._memory_conn = sqlite3.connect(":memory:", check_same_thread=False) if path == ":memory:" else None
         with self.connect() as conn:
             conn.executescript(SCHEMA)
@@ -77,7 +77,7 @@ class Database:
         jd_text: str | None = None,
         resume_text: str | None = None,
     ) -> AnalysisRecord:
-        created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        created_at = datetime.now(UTC).isoformat(timespec="seconds")
         with self.connect() as conn:
             cur = conn.execute(
                 """INSERT INTO analyses (candidate_name, score, report_json, jd_excerpt, jd_hash, resume_hash,
@@ -85,10 +85,23 @@ class Database:
                        pii_redacted, injection_suspected, injection_signals, created_at)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
-                    candidate_name, report.score, report.model_dump_json(), jd_excerpt, jd_hash, resume_hash,
-                    jd_text, resume_text, meta.provider, meta.model, meta.latency_ms, int(meta.jd_truncated),
-                    int(meta.resume_truncated), int(meta.pii_redacted), int(meta.injection_suspected),
-                    json.dumps(meta.injection_signals), created_at,
+                    candidate_name,
+                    report.score,
+                    report.model_dump_json(),
+                    jd_excerpt,
+                    jd_hash,
+                    resume_hash,
+                    jd_text,
+                    resume_text,
+                    meta.provider,
+                    meta.model,
+                    meta.latency_ms,
+                    int(meta.jd_truncated),
+                    int(meta.resume_truncated),
+                    int(meta.pii_redacted),
+                    int(meta.injection_suspected),
+                    json.dumps(meta.injection_signals),
+                    created_at,
                 ),
             )
             new_id = cur.lastrowid
@@ -112,7 +125,7 @@ class Database:
         where, params = [], []
         if name:
             escaped = name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            where.append("candidate_name LIKE ? ESCAPE '\\'")  # LIKE is case-insensitive for ASCII
+            where.append("candidate_name LIKE ? ESCAPE '\\'")
             params.append(f"%{escaped}%")
         if min_score is not None:
             where.append("score >= ?")
@@ -121,7 +134,7 @@ class Database:
             where.append("score <= ?")
             params.append(max_score)
         where_sql = f"WHERE {' AND '.join(where)}" if where else ""
-        order_sql = SORTS.get(sort, SORTS["newest"])  # whitelist: never interpolate user input
+        order_sql = SORTS.get(sort, SORTS["newest"])
 
         with self.connect() as conn:
             total = conn.execute(f"SELECT COUNT(*) FROM analyses {where_sql}", params).fetchone()[0]
@@ -132,8 +145,12 @@ class Database:
             ).fetchall()
         items = [
             AnalysisSummary(
-                id=r["id"], candidate_name=r["candidate_name"], score=r["score"], jd_excerpt=r["jd_excerpt"],
-                injection_suspected=bool(r["injection_suspected"]), created_at=r["created_at"],
+                id=r["id"],
+                candidate_name=r["candidate_name"],
+                score=r["score"],
+                jd_excerpt=r["jd_excerpt"],
+                injection_suspected=bool(r["injection_suspected"]),
+                created_at=r["created_at"],
             )
             for r in rows
         ]
@@ -144,7 +161,7 @@ class Database:
             return conn.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,)).rowcount > 0
 
     def purge_older_than(self, days: int) -> int:
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
         with self.connect() as conn:
             return conn.execute("DELETE FROM analyses WHERE created_at < ?", (cutoff,)).rowcount
 

@@ -16,7 +16,9 @@ def valid_report(**overrides) -> dict:
     report = {
         "score": 82,
         "score_rationale": "Meets most must-haves.",
-        "matching_skills": [{"skill": s, "evidence": f"Used {s}"} for s in ["Python", "FastAPI", "PostgreSQL", "Docker", "CI/CD"]],
+        "matching_skills": [
+            {"skill": s, "evidence": f"Used {s}"} for s in ["Python", "FastAPI", "PostgreSQL", "Docker", "CI/CD"]
+        ],
         "gaps": ["AWS depth", "Kubernetes", "Kafka"],
         "interview_questions": ["Q1?", "Q2?", "Q3?"],
         "summary": "Strong backend candidate.",
@@ -27,7 +29,7 @@ def valid_report(**overrides) -> dict:
 
 
 class ScriptedProvider:
-    """Returns queued outputs in order; an Exception in the queue is raised instead."""
+    """Test double that returns queued outputs and raises queued exceptions."""
 
     name = "scripted"
     model = "scripted-1"

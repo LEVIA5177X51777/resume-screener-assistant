@@ -22,7 +22,7 @@ score-range filter, sorting and pagination.
 # 1. Create a virtual env and install dependencies
 python -m venv .venv
 # Windows: .venv\Scripts\activate      macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt     # runtime deps + pytest + ruff (production: requirements.txt)
 
 # 2. Configure
 cp .env.example .env          # Windows: copy .env.example .env
@@ -34,13 +34,16 @@ uvicorn app.main:app --reload
 #   UI:        http://localhost:8000
 #   API docs:  http://localhost:8000/docs
 
-# 4. Tests (no network or API key needed)
+# 4. Tests and lint (no network or API key needed)
 pytest
+ruff check . && ruff format --check .
 ```
 
 > **Windows PowerShell:** if `activate` fails with *"running scripts is disabled on this system"*, either run
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or skip activation and call the venv directly:
 > `.venv\Scripts\python.exe -m uvicorn app.main:app --reload` and `.venv\Scripts\python.exe -m pytest`.
+
+Code style is enforced with **ruff** (lint + format, config in `pyproject.toml`).
 
 Sample inputs live in [`sample_data/`](sample_data): one JD, plus a strong resume, a weak resume and a resume that
 attempts prompt injection.

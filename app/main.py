@@ -1,4 +1,5 @@
-"""FastAPI app: JSON API under /api, server-rendered pages for HR users."""
+"""FastAPI application: REST API and server-rendered pages."""
+
 import base64
 import logging
 import math
@@ -14,7 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .config import Settings, settings as default_settings
+from .config import Settings
+from .config import settings as default_settings
 from .db import Database
 from .llm import LLMError, Provider, get_provider
 from .schemas import AnalysisList, AnalysisRecord, AnalyzeRequest, ErrorResponse
@@ -25,13 +27,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("screener")
 
 BASE_DIR = Path(__file__).parent
-templates = Jinja2Templates(directory=BASE_DIR / "templates")  # autoescaping on: LLM output can't inject HTML
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 SortOption = Literal["newest", "oldest", "score_desc", "score_asc"]
 
 
-def create_app(settings: Settings = default_settings, db: Database | None = None,
-               provider: Provider | None = None) -> FastAPI:
+def create_app(
+    settings: Settings = default_settings, db: Database | None = None, provider: Provider | None = None
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         purged = app.state.db.purge_older_than(settings.retention_days)
@@ -41,7 +44,7 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
     app = FastAPI(title="Resume Screener Assistant", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.db = db or Database(settings.database_path)
-    app.state.provider = provider  # built lazily so a missing key gives a clean error, not a crash
+    app.state.provider = provider
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
     if settings.basic_auth_user and settings.basic_auth_password:
@@ -54,15 +57,18 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
                     scheme, _, encoded = request.headers.get("authorization", "").partition(" ")
                     user, _, password = base64.b64decode(encoded).decode().partition(":")
                     ok = scheme.lower() == "basic" and all(
-                        secrets.compare_digest(a.encode(), b.encode()) for a, b in zip((user, password), expected))
+                        secrets.compare_digest(a.encode(), b.encode())
+                        for a, b in zip((user, password), expected, strict=True)
+                    )
                 except (ValueError, UnicodeDecodeError):
                     ok = False
                 if not ok:
-                    return JSONResponse(status_code=401, content=ErrorResponse(error="Authentication required").model_dump(),
-                                        headers={"WWW-Authenticate": 'Basic realm="Resume Screener"'})
+                    return JSONResponse(
+                        status_code=401,
+                        content=ErrorResponse(error="Authentication required").model_dump(),
+                        headers={"WWW-Authenticate": 'Basic realm="Resume Screener"'},
+                    )
             return await call_next(request)
-
-    # ------------------------------------------------------------ dependencies
 
     def get_db() -> Database:
         return app.state.db
@@ -71,8 +77,6 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
         if app.state.provider is None:
             app.state.provider = get_provider(settings)
         return app.state.provider
-
-    # ------------------------------------------------------------ error handling
 
     @app.exception_handler(InputError)
     async def _input_error(_: Request, exc: InputError):
@@ -93,21 +97,25 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
         for e in exc.errors():
             field = str(e["loc"][-1]).replace("_", " ")
             msgs.append(f"{field}: {'is required' if e['type'] in ('missing', 'string_too_short') else e['msg']}")
-        return JSONResponse(status_code=422, content=ErrorResponse(error="Invalid input", detail="; ".join(msgs)).model_dump())
+        return JSONResponse(
+            status_code=422, content=ErrorResponse(error="Invalid input", detail="; ".join(msgs)).model_dump()
+        )
 
     @app.exception_handler(Exception)
     async def _unhandled(_: Request, exc: Exception):
         log.exception("unhandled error type=%s", type(exc).__name__)
         return JSONResponse(status_code=500, content=ErrorResponse(error="Unexpected server error.").model_dump())
 
-    # ------------------------------------------------------------ API
-
     @app.get("/api/health")
     def health():
         return {"status": "ok", "provider": settings.llm_provider, "model": settings.model_name}
 
-    @app.post("/api/analyses", response_model=AnalysisRecord, status_code=201,
-              responses={422: {"model": ErrorResponse}, 502: {"model": ErrorResponse}, 503: {"model": ErrorResponse}})
+    @app.post(
+        "/api/analyses",
+        response_model=AnalysisRecord,
+        status_code=201,
+        responses={422: {"model": ErrorResponse}, 502: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
+    )
     def create_analysis(req: AnalyzeRequest, db: Database = Depends(get_db), llm: Provider = Depends(get_llm)):
         return run_analysis(req, llm, db, settings)
 
@@ -123,7 +131,9 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
     ):
         if min_score is not None and max_score is not None and min_score > max_score:
             raise InputError("min_score cannot be greater than max_score.")
-        items, total = db.list(name=name, min_score=min_score, max_score=max_score, sort=sort, limit=limit, offset=offset)
+        items, total = db.list(
+            name=name, min_score=min_score, max_score=max_score, sort=sort, limit=limit, offset=offset
+        )
         return AnalysisList(items=items, total=total, limit=limit, offset=offset)
 
     @app.get("/api/analyses/{analysis_id}", response_model=AnalysisRecord, responses={404: {"model": ErrorResponse}})
@@ -143,14 +153,17 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
         data = await file.read()
         return {"filename": file.filename, "text": extract_text(file.filename or "", data)}
 
-    # ------------------------------------------------------------ pages
-
     @app.get("/", include_in_schema=False)
     def index_page(request: Request):
-        return templates.TemplateResponse(request, "index.html", {
-            "provider": settings.llm_provider, "max_chars": settings.max_input_chars,
-            "min_chars": settings.min_input_chars,
-        })
+        return templates.TemplateResponse(
+            request,
+            "index.html",
+            {
+                "provider": settings.llm_provider,
+                "max_chars": settings.max_input_chars,
+                "min_chars": settings.min_input_chars,
+            },
+        )
 
     @app.get("/history", include_in_schema=False)
     def history_page(
@@ -168,13 +181,26 @@ def create_app(settings: Settings = default_settings, db: Database | None = None
         if lo is not None and hi is not None and lo > hi:
             error, lo, hi = "Min score cannot be greater than max score.", None, None
         page = max(page, 1)
-        items, total = db.list(name=name.strip() or None, min_score=lo, max_score=hi, sort=sort,
-                               limit=per_page, offset=(page - 1) * per_page)
-        return templates.TemplateResponse(request, "history.html", {
-            "items": items, "total": total, "page": page, "pages": max(1, math.ceil(total / per_page)),
-            "filters": {"name": name, "min_score": min_score, "max_score": max_score, "sort": sort},
-            "error": error,
-        })
+        items, total = db.list(
+            name=name.strip() or None,
+            min_score=lo,
+            max_score=hi,
+            sort=sort,
+            limit=per_page,
+            offset=(page - 1) * per_page,
+        )
+        return templates.TemplateResponse(
+            request,
+            "history.html",
+            {
+                "items": items,
+                "total": total,
+                "page": page,
+                "pages": max(1, math.ceil(total / per_page)),
+                "filters": {"name": name, "min_score": min_score, "max_score": max_score, "sort": sort},
+                "error": error,
+            },
+        )
 
     @app.get("/analyses/{analysis_id}", include_in_schema=False)
     def detail_page(request: Request, analysis_id: int, db: Database = Depends(get_db)):

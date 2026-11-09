@@ -1,7 +1,5 @@
-"""LLM access: pluggable providers, retry with backoff, JSON extraction, validation and one repair round-trip.
+"""LLM providers, retry handling and validated report generation."""
 
-Nothing in this module logs prompt content, resume text or API keys.
-"""
 import json
 import logging
 import random
@@ -18,14 +16,14 @@ from .prompts import RESPONSE_SCHEMA, SYSTEM_PROMPT, build_repair_prompt, build_
 from .schemas import MatchReport
 
 log = logging.getLogger("screener.llm")
-logging.getLogger("httpx").setLevel(logging.WARNING)  # httpx INFO logs full URLs
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504}
 MAX_REPAIR_ATTEMPTS = 1
 
 
 class LLMError(Exception):
-    """Base error. `user_message` is safe to show in the UI (no internals, no secrets)."""
+    """Base LLM error. `user_message` is safe to display to end users."""
 
     user_message = "The AI service failed. Please try again."
     http_status = 502
@@ -51,7 +49,7 @@ class LLMBadOutput(LLMError):
     http_status = 502
 
 
-Message = dict[str, str]  # {"role": "user"|"assistant", "content": str}
+Message = dict[str, str]
 
 
 class Provider(Protocol):
@@ -60,8 +58,6 @@ class Provider(Protocol):
 
     def complete(self, system: str, messages: list[Message]) -> str: ...
 
-
-# ---------------------------------------------------------------- HTTP with retry
 
 def _post_json(client: httpx.Client, url: str, headers: dict, body: dict, max_retries: int) -> dict:
     last_exc: Exception | None = None
@@ -77,7 +73,6 @@ def _post_json(client: httpx.Client, url: str, headers: dict, body: dict, max_re
             if resp.status_code in (401, 403):
                 raise LLMConfigError(f"auth failed status={resp.status_code}")
             if resp.status_code not in RETRYABLE_STATUS:
-                # 400 etc.: retrying the same request will not help. Do not include the body (may echo input).
                 raise LLMError(f"non-retryable status={resp.status_code}")
             last_exc = LLMUnavailable(f"status={resp.status_code}")
             log.warning("llm retryable status=%d attempt=%d", resp.status_code, attempt + 1)
@@ -86,11 +81,9 @@ def _post_json(client: httpx.Client, url: str, headers: dict, body: dict, max_re
                 time.sleep(min(int(retry_after), 20))
                 continue
         if attempt < max_retries:
-            time.sleep(min(2 ** attempt + random.uniform(0, 0.5), 10))  # 1s, 2s, 4s (+ jitter)
+            time.sleep(min(2**attempt + random.uniform(0, 0.5), 10))
     raise LLMUnavailable(f"gave up after {max_retries + 1} attempts: {type(last_exc).__name__}")
 
-
-# ---------------------------------------------------------------- providers
 
 class GeminiProvider:
     name = "gemini"
@@ -117,18 +110,17 @@ class GeminiProvider:
                 "responseSchema": RESPONSE_SCHEMA,
             },
         }
-        # Key goes in a header, not the query string, so it never appears in URL/access logs.
         data = _post_json(self._client, url, {"x-goog-api-key": self._key}, body, self._retries)
         try:
             candidate = data["candidates"][0]
             return "".join(p.get("text", "") for p in candidate["content"]["parts"])
         except (KeyError, IndexError, TypeError):
             reason = (data.get("promptFeedback") or {}).get("blockReason") or "no candidates"
-            raise LLMBadOutput(f"empty gemini response: {reason}")
+            raise LLMBadOutput(f"empty gemini response: {reason}") from None
 
 
 class OpenAICompatProvider:
-    """Works with Groq, OpenRouter, OpenAI and Ollama (all expose /chat/completions)."""
+    """Provider for any OpenAI-compatible chat completions API."""
 
     name = "openai_compat"
 
@@ -153,20 +145,64 @@ class OpenAICompatProvider:
         try:
             return data["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError):
-            raise LLMBadOutput("unexpected chat completion shape")
+            raise LLMBadOutput("unexpected chat completion shape") from None
 
 
 SKILL_VOCAB = [
-    "python", "java", "javascript", "typescript", "react", "node", "sql", "postgresql", "mysql", "mongodb",
-    "aws", "azure", "gcp", "docker", "kubernetes", "terraform", "fastapi", "django", "flask", "spring",
-    "git", "ci/cd", "rest", "graphql", "machine learning", "llm", "nlp", "pytorch", "tensorflow", "pandas",
-    "kotlin", "swift", "android", "ios", "go", "rust", "c++", "linux", "redis", "kafka", "agile",
-    "communication", "leadership", "testing", "microservices", "html", "css", "figma", "excel",
+    "python",
+    "java",
+    "javascript",
+    "typescript",
+    "react",
+    "node",
+    "sql",
+    "postgresql",
+    "mysql",
+    "mongodb",
+    "aws",
+    "azure",
+    "gcp",
+    "docker",
+    "kubernetes",
+    "terraform",
+    "fastapi",
+    "django",
+    "flask",
+    "spring",
+    "git",
+    "ci/cd",
+    "rest",
+    "graphql",
+    "machine learning",
+    "llm",
+    "nlp",
+    "pytorch",
+    "tensorflow",
+    "pandas",
+    "kotlin",
+    "swift",
+    "android",
+    "ios",
+    "go",
+    "rust",
+    "c++",
+    "linux",
+    "redis",
+    "kafka",
+    "agile",
+    "communication",
+    "leadership",
+    "testing",
+    "microservices",
+    "html",
+    "css",
+    "figma",
+    "excel",
 ]
 
 
 class MockProvider:
-    """Offline, deterministic provider for tests and demos without an API key. Clearly labelled 'mock' in the UI."""
+    """Deterministic offline provider for tests and keyless demos."""
 
     name = "mock"
     model = "mock-keyword-matcher"
@@ -215,10 +251,8 @@ def get_provider(settings: Settings) -> Provider:
     raise LLMConfigError(f"unknown LLM_PROVIDER={settings.llm_provider!r}")
 
 
-# ---------------------------------------------------------------- parsing & validation
-
 def parse_report(raw: str) -> MatchReport:
-    """Extract a JSON object from model text (tolerates ```json fences / stray prose) and validate it."""
+    """Extract and validate a JSON report from raw model output."""
     text = raw.strip()
     fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.S)
     if fenced:
@@ -253,11 +287,11 @@ def analyze(provider: Provider, job_description: str, resume: str) -> AnalysisRe
         try:
             report = parse_report(raw)
             break
-        except (ValueError, ValidationError) as exc:  # json.JSONDecodeError is a ValueError
+        except (ValueError, ValidationError) as exc:
             error = _short_error(exc)
             log.warning("llm output invalid attempt=%d error_type=%s", attempt + 1, type(exc).__name__)
             if attempt == MAX_REPAIR_ATTEMPTS:
-                raise LLMBadOutput(f"validation failed after repair: {error}")
+                raise LLMBadOutput(f"validation failed after repair: {error}") from exc
             messages += [
                 {"role": "assistant", "content": raw},
                 {"role": "user", "content": build_repair_prompt(raw, error)},
@@ -265,10 +299,16 @@ def analyze(provider: Provider, job_description: str, resume: str) -> AnalysisRe
             repaired = True
 
     latency_ms = int((time.perf_counter() - started) * 1000)
-    log.info("llm analysis ok provider=%s model=%s latency_ms=%d repaired=%s", provider.name, provider.model,
-             latency_ms, repaired)
-    return AnalysisResult(report=report, provider=provider.name, model=provider.model, latency_ms=latency_ms,
-                          repaired=repaired)
+    log.info(
+        "llm analysis ok provider=%s model=%s latency_ms=%d repaired=%s",
+        provider.name,
+        provider.model,
+        latency_ms,
+        repaired,
+    )
+    return AnalysisResult(
+        report=report, provider=provider.name, model=provider.model, latency_ms=latency_ms, repaired=repaired
+    )
 
 
 def _short_error(exc: Exception) -> str:

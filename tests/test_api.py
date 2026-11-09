@@ -1,6 +1,11 @@
+from dataclasses import replace
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
+from app.db import Database
 from app.llm import LLMUnavailable
+from app.main import create_app
 from tests.conftest import JD, RESUME, ScriptedProvider, valid_report
 
 SAMPLES = Path(__file__).parent.parent / "sample_data"
@@ -35,7 +40,7 @@ def test_empty_and_short_inputs_rejected(make_client):
         assert c.post("/api/analyses", json=_payload(resume="")).status_code == 422
         res = c.post("/api/analyses", json=_payload(jd="too short"))
         assert res.status_code == 422 and "too short" in res.json()["error"]
-    assert provider.calls == []  # never paid for an LLM call on bad input
+    assert provider.calls == []
 
 
 def test_long_input_truncated(make_client):
@@ -79,26 +84,19 @@ def test_history_filters(make_client):
         assert c.get("/api/analyses", params={"min_score": 50, "max_score": 70}).json()["items"][0]["score"] == 65
         scores = [i["score"] for i in c.get("/api/analyses", params={"sort": "score_desc"}).json()["items"]]
         assert scores == [90, 65, 40]
-        assert c.get("/api/analyses", params={"name": "%"}).json()["total"] == 0  # wildcard escaped
+        assert c.get("/api/analyses", params={"name": "%"}).json()["total"] == 0
         assert c.get("/api/analyses", params={"min_score": 80, "max_score": 20}).status_code == 422
         assert c.get("/api/analyses", params={"min_score": 101}).status_code == 422
         assert c.get("/history", params={"name": "priya", "min_score": "abc"}).status_code == 200
 
 
 def test_basic_auth_when_configured(settings):
-    from dataclasses import replace
-
-    from fastapi.testclient import TestClient
-
-    from app.db import Database
-    from app.main import create_app
-
     secured = replace(settings, basic_auth_user="hr", basic_auth_password="s3cret")
     with TestClient(create_app(secured, Database(":memory:"), ScriptedProvider())) as c:
         assert c.get("/history").status_code == 401
         assert c.get("/history", auth=("hr", "wrong")).status_code == 401
         assert c.get("/history", auth=("hr", "s3cret")).status_code == 200
-        assert c.get("/api/health").status_code == 200  # for platform health checks
+        assert c.get("/api/health").status_code == 200
 
 
 def test_delete(make_client):

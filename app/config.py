@@ -1,4 +1,5 @@
-"""Runtime settings, read once from environment variables (.env supported)."""
+"""Application settings loaded from environment variables."""
+
 import os
 from dataclasses import dataclass
 
@@ -32,11 +33,10 @@ class Settings:
 
     database_path: str = os.getenv("DATABASE_PATH", "data/screener.db")
 
-    # Optional HTTP Basic auth: enable whenever the app is reachable beyond localhost.
     basic_auth_user: str = os.getenv("BASIC_AUTH_USER", "")
     basic_auth_password: str = os.getenv("BASIC_AUTH_PASSWORD", "")
 
-    def __repr__(self) -> str:  # never leak secrets via logs / tracebacks
+    def __repr__(self) -> str:
         return f"Settings(provider={self.llm_provider!r}, model={self.model_name!r})"
 
     @property

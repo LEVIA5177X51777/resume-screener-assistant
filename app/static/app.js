@@ -1,4 +1,3 @@
-// Progressive enhancement for the analysis form and detail page. No framework needed.
 (function () {
   "use strict";
 
@@ -11,7 +10,6 @@
     }
   }
 
-  // ---------- analysis form ----------
   const form = document.getElementById("analyze-form");
   if (form) {
     const maxChars = Number(form.dataset.maxChars);
@@ -65,7 +63,6 @@
         job_description: form.elements.job_description.value.trim(),
         resume: form.elements.resume.value.trim(),
       };
-      // Client-side checks mirror the server's; the server remains the source of truth.
       if (!payload.candidate_name) return showError("Please enter the candidate's name.");
       if (payload.job_description.length < minChars) return showError(`Job description is too short (min ${minChars} characters).`);
       if (payload.resume.length < minChars) return showError(`Resume is too short (min ${minChars} characters).`);
@@ -91,7 +88,6 @@
     });
   }
 
-  // ---------- delete on detail page ----------
   const del = document.getElementById("delete-btn");
   if (del) {
     del.addEventListener("click", async () => {

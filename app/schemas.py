@@ -1,4 +1,5 @@
-"""Pydantic models: the single source of truth for API contracts and LLM output validation."""
+"""Pydantic models for API contracts and LLM output validation."""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -9,14 +10,13 @@ LongText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1,
 
 
 def _coerce_score(v):
-    # LLMs sometimes return "85", 85.0 or "85/100". Accept those, reject anything else.
     if isinstance(v, str):
         v = v.strip().split("/")[0].strip().rstrip("%")
     if isinstance(v, (int, float, str)):
         try:
             f = float(v)
         except ValueError:
-            return v  # let pydantic raise a proper validation error
+            return v
         if f.is_integer():
             return int(f)
         return round(f)
@@ -32,7 +32,7 @@ class MatchingSkill(BaseModel):
 
 
 class MatchReport(BaseModel):
-    """Exactly what the LLM must return. Anything else is rejected before display."""
+    """Structured match report returned by the LLM."""
 
     model_config = ConfigDict(extra="ignore")
 

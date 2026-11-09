@@ -1,9 +1,19 @@
-"""Orchestrates one analysis: validate -> pre-process -> LLM -> persist. Routes stay thin; this is unit-testable."""
+"""Analysis pipeline: validation, preprocessing, LLM call and persistence."""
+
 from .config import Settings
 from .db import Database
 from .llm import Provider, analyze
 from .schemas import AnalysisMeta, AnalysisRecord, AnalyzeRequest
-from .text_utils import InputError, detect_injection, excerpt, neutralize_delimiters, normalize, redact_pii, sha256, truncate
+from .text_utils import (
+    InputError,
+    detect_injection,
+    excerpt,
+    neutralize_delimiters,
+    normalize,
+    redact_pii,
+    sha256,
+    truncate,
+)
 
 
 def run_analysis(req: AnalyzeRequest, provider: Provider, db: Database, settings: Settings) -> AnalysisRecord:

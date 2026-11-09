@@ -29,11 +29,14 @@ def test_detects_injection_in_sample():
     assert {"override_instructions", "score_manipulation", "delimiter_escape"} <= set(signals)
 
 
-@pytest.mark.parametrize("benign", [
-    (SAMPLES / "resume_strong.txt").read_text(),
-    "Ranked in the top 100 of 5,000 participants.",
-    "Reduced costs by 100k and led a team of 5.",
-])
+@pytest.mark.parametrize(
+    "benign",
+    [
+        (SAMPLES / "resume_strong.txt").read_text(),
+        "Ranked in the top 100 of 5,000 participants.",
+        "Reduced costs by 100k and led a team of 5.",
+    ],
+)
 def test_no_false_positive_on_normal_resumes(benign):
     assert detect_injection(benign) == []
 
@@ -52,4 +55,4 @@ def test_extract_rejects_unsupported_and_empty():
 
 
 def test_extract_txt():
-    assert extract_text("cv.txt", "Python dev\r\n\r\n\r\n\r\nFastAPI".encode()) == "Python dev\n\nFastAPI"
+    assert extract_text("cv.txt", b"Python dev\r\n\r\n\r\n\r\nFastAPI") == "Python dev\n\nFastAPI"
